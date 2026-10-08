@@ -1,0 +1,84 @@
+{# Contenido de la tarjeta "Usuarios registrados". Se incluye en dashboard.html y se devuelve sola en las búsquedas en vivo. #}
+<div class="p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h5 class="mb-0 fw-bold">Usuarios registrados</h5>
+    <form method="get" class="m-0">
+        {% if rol_filtro %}<input type="hidden" name="rol" value="{{ rol_filtro }}">{% endif %}
+        {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+        <select name="estado" class="form-select form-select-sm w-auto" aria-label="Filtrar por estado">
+            <option value="">Todos los estados</option>
+            <option value="activo" {% if estado_filtro == 'activo' %}selected{% endif %}>Activos</option>
+            <option value="inactivo" {% if estado_filtro == 'inactivo' %}selected{% endif %}>Inactivos</option>
+        </select>
+    </form>
+</div>
+
+{% if q %}
+<div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:#fff0e8;">
+    <span>Resultados para <strong>"{{ q }}"</strong>: {{ page_obj.paginator.count }} usuario{{ page_obj.paginator.count|pluralize }}</span>
+    <a href="{% url 'admin_dashboard' %}" class="action-edit">Limpiar búsqueda</a>
+</div>
+{% endif %}
+
+<div class="table-responsive">
+    <table class="table table-custom mb-0">
+        <thead>
+            <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for u in page_obj %}
+            <tr>
+                <td>{{ u.nombres }} {{ u.ap_pat }} {{ u.ap_mat }}</td>
+                <td>{{ u.correo }}</td>
+                <td>
+                    <span class="role-badge {% if u.rol.nombre|lower == 'docente' %}docente{% elif u.rol.nombre|lower == 'administrador' %}admin{% else %}estudiante{% endif %}">{{ u.rol.nombre }}</span>
+                </td>
+                <td>
+                    <div class="estado-cell">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input estado-switch" type="checkbox"
+                                   data-url="{% url 'admin_toggle_estado' u.id_usuario %}"
+                                   {% if u.estado %}checked{% endif %}
+                                   {% if u.id_usuario == request.session.usuario_id %}disabled title="No puedes desactivar tu propia cuenta"{% endif %}>
+                        </div>
+                        <span class="estado-label {% if u.estado %}activo{% else %}inactivo{% endif %}">{% if u.estado %}Activo{% else %}Inactivo{% endif %}</span>
+                    </div>
+                </td>
+                <td><a href="{% url 'admin_edit_user' u.id_usuario %}" class="action-edit">Editar</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-4">
+                {% if q %}No se encontraron usuarios para "{{ q }}".{% elif rol_filtro or estado_filtro %}No hay usuarios que coincidan con el filtro.{% else %}Todavía no hay usuarios registrados.{% endif %}
+            </td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.paginator.count %}
+<div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="text-muted" style="font-size:.9rem;">
+        Mostrando {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+    </div>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav aria-label="Paginación de usuarios">
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                <a class="page-link" {% if page_obj.has_previous %}href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}"{% endif %} aria-label="Anterior">&laquo;</a>
+            </li>
+            {% for n in page_range %}
+                {% if n is None %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% else %}
+                <li class="page-item {% if n == page_obj.number %}active{% endif %}">
+                    <a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ n }}">{{ n }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                <a class="page-link" {% if page_obj.has_next %}href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}"{% endif %} aria-label="Siguiente">&raquo;</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endif %}

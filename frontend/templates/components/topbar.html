@@ -6,9 +6,11 @@
         <span class="logo-text">da | vinci</span>
         <div class="logo-sub">EDUCATIVO</div>
     </a>
-    <div class="search-box">
-        <input type="text" placeholder="Buscar">
-    </div>
+    {% url 'admin_dashboard' as dash_url %}
+    <form class="search-box" method="get" action="{{ search_url|default:dash_url }}" role="search">
+        <input type="search" name="q" value="{{ q|default:'' }}" maxlength="100"
+               placeholder="Buscar por nombre, correo, CI o código" aria-label="Buscar usuarios" autocomplete="off">
+    </form>
     <div class="user-info">
         <a href="{% url 'perfil' %}" class="profile-link" title="Mi perfil">
             <div>

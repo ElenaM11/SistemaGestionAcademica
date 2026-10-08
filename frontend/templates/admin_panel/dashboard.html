@@ -34,81 +34,8 @@
             <div class="stat-label">Cursos activos</div><div class="stat-number">{{ cursos_activos }}</div></div></div>
     </div>
 
-    <div class="table-custom">
-        <div class="p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h5 class="mb-0 fw-bold">Usuarios registrados</h5>
-            <form method="get" class="m-0">
-                {% if rol_filtro %}<input type="hidden" name="rol" value="{{ rol_filtro }}">{% endif %}
-                <select name="estado" class="form-select form-select-sm w-auto" aria-label="Filtrar por estado" onchange="this.form.submit()">
-                    <option value="">Todos los estados</option>
-                    <option value="activo" {% if estado_filtro == 'activo' %}selected{% endif %}>Activos</option>
-                    <option value="inactivo" {% if estado_filtro == 'inactivo' %}selected{% endif %}>Inactivos</option>
-                </select>
-            </form>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-custom mb-0">
-                <thead>
-                    <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr>
-                </thead>
-                <tbody>
-                    {% for u in page_obj %}
-                    <tr>
-                        <td>{{ u.nombres }} {{ u.ap_pat }} {{ u.ap_mat }}</td>
-                        <td>{{ u.correo }}</td>
-                        <td>
-                            <span class="role-badge {% if u.rol.nombre|lower == 'docente' %}docente{% elif u.rol.nombre|lower == 'administrador' %}admin{% else %}estudiante{% endif %}">{{ u.rol.nombre }}</span>
-                        </td>
-                        <td>
-                            <div class="estado-cell">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input estado-switch" type="checkbox"
-                                           data-url="{% url 'admin_toggle_estado' u.id_usuario %}"
-                                           {% if u.estado %}checked{% endif %}
-                                           {% if u.id_usuario == request.session.usuario_id %}disabled title="No puedes desactivar tu propia cuenta"{% endif %}>
-                                </div>
-                                <span class="estado-label {% if u.estado %}activo{% else %}inactivo{% endif %}">{% if u.estado %}Activo{% else %}Inactivo{% endif %}</span>
-                            </div>
-                        </td>
-                        <td><a href="{% url 'admin_edit_user' u.id_usuario %}" class="action-edit">Editar</a></td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="5" class="text-center text-muted py-4">
-                        {% if rol_filtro or estado_filtro %}No hay usuarios que coincidan con el filtro.{% else %}Todavía no hay usuarios registrados.{% endif %}
-                    </td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {% if page_obj.paginator.count %}
-        <div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div class="text-muted" style="font-size:.9rem;">
-                Mostrando {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }}
-            </div>
-            {% if page_obj.paginator.num_pages > 1 %}
-            <nav aria-label="Paginación de usuarios">
-                <ul class="pagination pagination-sm mb-0">
-                    <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
-                        <a class="page-link" {% if page_obj.has_previous %}href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}"{% endif %} aria-label="Anterior">&laquo;</a>
-                    </li>
-                    {% for n in page_range %}
-                        {% if n is None %}
-                        <li class="page-item disabled"><span class="page-link">…</span></li>
-                        {% else %}
-                        <li class="page-item {% if n == page_obj.number %}active{% endif %}">
-                            <a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ n }}">{{ n }}</a>
-                        </li>
-                        {% endif %}
-                    {% endfor %}
-                    <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
-                        <a class="page-link" {% if page_obj.has_next %}href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}"{% endif %} aria-label="Siguiente">&raquo;</a>
-                    </li>
-                </ul>
-            </nav>
-            {% endif %}
-        </div>
-        {% endif %}
+    <div class="table-custom" id="usuariosCard" aria-live="polite">
+        {% include 'admin_panel/_usuarios_tabla.html' %}
     </div>
 </main>
 {% endblock %}
@@ -120,28 +47,83 @@
     overlay.addEventListener('click', () => { sidebar.classList.remove('show'); overlay.classList.remove('show'); });
 
     const csrf = document.querySelector('.app-main').dataset.csrf;
+    const card = document.getElementById('usuariosCard');
+    const searchForm = document.querySelector('.search-box');
+    const input = searchForm.querySelector('input[name="q"]');
+    let timer, ctrl;
 
-    // Guarda el estado en el servidor y recarga la página actual (mantiene filtro y página)
-    // para que los contadores y el filtro queden siempre correctos.
-    document.querySelectorAll('.estado-switch').forEach(sw => {
-        sw.addEventListener('change', async () => {
-            const quiere = sw.checked;
-            sw.disabled = true;
+    // Pide solo la tabla al servidor y la reemplaza (sin recargar la página)
+    async function cargar(url) {
+        if (ctrl) ctrl.abort();                       // cancela la búsqueda anterior
+        const mine = ctrl = new AbortController();
+        card.style.opacity = '.55';
+        try {
+            const r = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, signal: mine.signal });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            card.innerHTML = await r.text();
+            history.replaceState(null, '', url);
+        } catch (e) {
+            if (e.name !== 'AbortError') location.href = url;   // si algo falla, carga normal
+        } finally {
+            if (ctrl === mine) card.style.opacity = '';
+        }
+    }
+
+    // Construye la URL actual cambiando solo algunos parámetros
+    function urlCon(cambios) {
+        const p = new URLSearchParams(location.search);
+        Object.entries(cambios).forEach(([k, v]) => v ? p.set(k, v) : p.delete(k));
+        p.delete('page');
+        const qs = p.toString();
+        return location.pathname + (qs ? '?' + qs : '');
+    }
+
+    // Búsqueda mientras escribes (espera 300 ms sin teclear)
+    input.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => cargar(urlCon({ q: input.value.trim() })), 300);
+    });
+    searchForm.addEventListener('submit', e => {      // Enter: busca al instante
+        e.preventDefault();
+        clearTimeout(timer);
+        cargar(urlCon({ q: input.value.trim() }));
+    });
+
+    // Paginador: cambia de página sin recargar
+    card.addEventListener('click', e => {
+        const a = e.target.closest('.pagination a[href]');
+        if (!a) return;
+        e.preventDefault();
+        cargar(a.getAttribute('href')).then(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    });
+
+    // Filtro de estado + interruptores (delegación: siguen funcionando tras cada actualización)
+    card.addEventListener('change', async e => {
+        const t = e.target;
+
+        if (t.matches('select[name="estado"]')) {
+            cargar(urlCon({ estado: t.value }));
+            return;
+        }
+
+        if (t.matches('.estado-switch')) {
+            const quiere = t.checked;
+            t.disabled = true;
             try {
-                const r = await fetch(sw.dataset.url, {
+                const r = await fetch(t.dataset.url, {
                     method: 'POST',
                     headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'estado=' + (quiere ? '1' : '0'),
                 });
                 const d = await r.json();
                 if (!r.ok || !d.ok) throw new Error(d.error || 'Error');
-                location.reload();
-            } catch (e) {
-                sw.checked = !quiere;
-                sw.disabled = false;
-                alert('No se pudo cambiar el estado. ' + (e.message || ''));
+                location.reload();                    // actualiza también los contadores de arriba
+            } catch (err) {
+                t.checked = !quiere;
+                t.disabled = false;
+                alert('No se pudo cambiar el estado. ' + (err.message || ''));
             }
-        });
+        }
     });
 </script>
 {% endblock %}
