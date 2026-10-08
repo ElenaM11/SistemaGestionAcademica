@@ -1,0 +1,119 @@
+/* admin_layout.css — cargar DESPUÉS de custom.css (ver base.html) */
+:root {
+    --nav-top: 71px;
+    --rail-w: 108px;
+    --panel-w: 375px;
+}
+
+/* ---------- Barra superior ---------- */
+.app-topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: var(--nav-top);
+    background: #fff; border-bottom: 1px solid #e5e7ee;
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0 1.25rem; z-index: 1030;
+}
+.app-topbar .brand { width: calc(var(--rail-w) + 60px); line-height: 1; text-decoration: none; }
+.app-topbar .brand .logo-text { font-size: 2rem; font-weight: 500; color: var(--color-orange, #ff5a00); }
+.app-topbar .brand .logo-sub { font-size: .65rem; letter-spacing: .35em; color: var(--color-orange, #ff5a00); text-align: right; }
+.app-topbar .search-box { flex: 1; max-width: 630px; margin: 0 auto; }
+.app-topbar .search-box input {
+    width: 100%; border: 0; background: #f4f5f9; border-radius: 999px;
+    padding: .8rem 1.5rem; outline: none;
+}
+.app-topbar .user-info { display: flex; align-items: center; gap: .75rem; margin-left: auto; }
+.app-topbar .user-info a.profile-link { display: flex; align-items: center; gap: .75rem; text-decoration: none; color: inherit; }
+.app-topbar .user-name { font-size: .95rem; text-align: right; }
+.app-topbar .user-role { font-size: .8rem; color: #6b7280; text-align: right; }
+.app-topbar .user-avatar {
+    width: 46px; height: 46px; border-radius: 50%; background: var(--color-orange, #ff5a00);
+    color: #fff; font-weight: 700; display: grid; place-items: center;
+}
+.app-topbar .btn-logout {
+    background: var(--color-orange, #ff5a00); color: #fff; border-radius: 999px;
+    padding: .7rem 1.4rem; text-decoration: none; font-weight: 500;
+}
+.hamburger-btn { display: none; border: 0; background: none; font-size: 1.8rem; }
+
+/* ---------- Navegación: riel de iconos + panel ---------- */
+.app-nav {
+    position: fixed; top: var(--nav-top); bottom: 0; left: 0; display: flex;
+    background: #fff; z-index: 1020;
+}
+.rail {
+    width: var(--rail-w); border-right: 1px solid #e5e7ee; padding: 1.25rem .6rem;
+    display: flex; flex-direction: column; gap: .5rem; list-style: none; margin: 0;
+}
+.rail-link {
+    display: flex; flex-direction: column; align-items: center; gap: .15rem;
+    padding: .7rem .25rem; border-radius: 12px; text-decoration: none;
+    color: #6b7280; font-size: .85rem;
+}
+.rail-link i { font-size: 1.5rem; }
+.rail-link.active { background: #fff0e8; color: var(--color-orange, #ff5a00); font-weight: 700; box-shadow: inset 0 0 0 2px var(--color-orange, #ff5a00); }
+
+.subpanel { width: var(--panel-w); border-right: 1px solid #e5e7ee; padding: 1.6rem 1rem; }
+.subpanel h4 { font-weight: 800; font-size: 1.6rem; margin: 0 0 1.1rem .5rem; }
+.sub-item {
+    display: flex; align-items: center; gap: 1rem; padding: .7rem 1rem; margin-bottom: .45rem;
+    border-radius: 10px; text-decoration: none; color: #111; font-size: 1.1rem;
+}
+.sub-item .chip {
+    width: 46px; height: 46px; border-radius: 10px; display: grid; place-items: center;
+    color: #fff; font-weight: 700;
+}
+.sub-item.active { background: #fff0e8; box-shadow: inset 4px 0 0 var(--color-orange, #ff5a00); }
+.chip.c-orange { background: var(--color-orange, #ff5a00); }
+.chip.c-purple { background: #5b2a86; }
+.chip.c-yellow { background: #ffc107; }
+.chip.c-gray   { background: #8a8f9c; }
+
+/* ---------- Contenido principal ---------- */
+.app-main {
+    margin-left: calc(var(--rail-w) + var(--panel-w));
+    padding: calc(var(--nav-top) + 1.5rem) 2rem 2rem;
+    min-height: 100vh; background: #f4f5f9;
+}
+.app-main.no-panel { margin-left: var(--rail-w); }
+
+.stats-card.accent-orange { border-top: 5px solid var(--color-orange, #ff5a00); }
+.stats-card.accent-yellow { border-top: 5px solid #ffc107; }
+.stats-card.accent-gray   { border-top: 5px solid #8a8f9c; }
+
+/* Estado (switch + etiqueta) */
+.estado-cell { display: flex; align-items: center; gap: .6rem; }
+.estado-label { font-size: .85rem; font-weight: 600; }
+.estado-label.activo { color: #198754; }
+.estado-label.inactivo { color: #6b7280; }
+.form-check-input:checked { background-color: var(--color-orange, #ff5a00); border-color: var(--color-orange, #ff5a00); }
+.estado-cell .form-switch { margin: 0; padding-left: 2.5em; min-height: auto; }
+
+/* Selector de rol / campos extra */
+.role-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; max-width: 960px; }
+.role-btn {
+    background: #fff; border: 2px solid #e5e7ee; border-radius: 12px; text-align: center;
+    padding: 1rem; cursor: pointer;
+}
+.role-btn.active { border-color: var(--color-orange, #ff5a00); background: #fff0e8; font-weight: 700; }
+.extra-fields { display: none; }
+.extra-fields.show { display: contents; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 991.98px) {
+    .hamburger-btn { display: block; }
+    .app-topbar .brand { width: auto; }
+    .app-topbar .user-info > div:first-child { display: none; }
+    .app-nav { transform: translateX(-100%); transition: transform .2s; }
+    .app-nav.show { transform: none; }
+    .subpanel { display: none; }
+    .app-main, .app-main.no-panel { margin-left: 0; padding-inline: 1rem; }
+    .role-selector { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .app-nav { transition: none; } }
+
+/* ---------- Paginador ---------- */
+.pagination .page-link { color: #111; border-color: #e5e7ee; }
+.pagination .page-link:hover { background: #fff0e8; color: var(--color-orange, #ff5a00); }
+.pagination .page-item.active .page-link {
+    background: var(--color-orange, #ff5a00); border-color: var(--color-orange, #ff5a00); color: #fff;
+}
+.pagination .page-item.disabled .page-link { color: #9ca3af; }

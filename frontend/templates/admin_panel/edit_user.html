@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Usuario - Da Vinci{% endblock %}
+
+{% block content %}
+{% include 'components/topbar.html' with user_name=request.session.usuario_nombre user_role='Administrador' initials=request.session.usuario_iniciales %}
+{% include 'components/sidebar_admin.html' with active_tab='usuarios' active_sub='' %}
+
+<main class="app-main">
+    <div class="col-xl-9">
+        <h3 class="fw-bold mb-1">Editar usuario</h3>
+        <p class="text-muted mb-4">
+            {{ usuario.nombres }} {{ usuario.ap_pat }} {{ usuario.ap_mat }}
+            <span class="role-badge {% if es_docente %}docente{% elif es_estudiante %}estudiante{% else %}admin{% endif %} ms-2">{{ usuario.rol.nombre }}</span>
+        </p>
+
+        {% if messages %}
+            {% for m in messages %}
+            <div class="alert alert-{% if m.tags == 'error' %}danger{% else %}{{ m.tags }}{% endif %}">{{ m }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" action="{% url 'admin_edit_user' usuario.id_usuario %}">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="nombres" class="form-label">Nombres</label>
+                    <input type="text" class="form-control" id="nombres" name="nombres" value="{{ form.nombres }}" required>
+                </div>
+                <div class="col-md-3">
+                    <label for="ap_pat" class="form-label">Apellido paterno</label>
+                    <input type="text" class="form-control" id="ap_pat" name="ap_pat" value="{{ form.ap_pat }}" required>
+                </div>
+                <div class="col-md-3">
+                    <label for="ap_mat" class="form-label">Apellido materno</label>
+                    <input type="text" class="form-control" id="ap_mat" name="ap_mat" value="{{ form.ap_mat }}" required>
+                </div>
+
+                {% if es_estudiante %}
+                <div class="col-md-6">
+                    <label class="form-label">Código de estudiante</label>
+                    <input type="text" class="form-control" value="{{ codigo_estudiante }}" readonly>
+                </div>
+                {% endif %}
+
+                <div class="col-md-6">
+                    <label for="correo" class="form-label">Correo electrónico</label>
+                    <input type="email" class="form-control" id="correo" name="correo" value="{{ form.correo }}" {% if es_estudiante %}readonly{% endif %} required>
+                    {% if es_estudiante %}<div class="form-text">El correo del estudiante depende de su código y no se modifica.</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label for="ci" class="form-label">Carnet de identidad</label>
+                    <input type="text" class="form-control" id="ci" name="ci" value="{{ form.ci }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="telefono" class="form-label">Teléfono</label>
+                    <input type="tel" class="form-control" id="telefono" name="telefono" value="{{ form.telefono }}" required>
+                </div>
+
+                {% if es_docente %}
+                <div class="col-md-6">
+                    <label for="especialidad" class="form-label">Especialidad</label>
+                    <input type="text" class="form-control" id="especialidad" name="especialidad" value="{{ form.especialidad }}" required>
+                </div>
+                {% endif %}
+
+                {% if es_estudiante %}
+                <div class="col-md-6">
+                    <label for="fecha_nacimiento" class="form-label">Fecha de nacimiento</label>
+                    <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" value="{{ form.fecha_nacimiento }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="contacto_emergencia" class="form-label">Contacto de emergencia</label>
+                    <input type="text" class="form-control" id="contacto_emergencia" name="contacto_emergencia" value="{{ form.contacto_emergencia }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="telefono_emergencia" class="form-label">Teléfono de emergencia</label>
+                    <input type="tel" class="form-control" id="telefono_emergencia" name="telefono_emergencia" value="{{ form.telefono_emergencia }}" required>
+                </div>
+                {% endif %}
+
+                <div class="col-md-6">
+                    <label for="estado" class="form-label">Estado</label>
+                    <select class="form-select" id="estado" name="estado" {% if es_propio %}disabled{% endif %}>
+                        <option value="1" {% if form.estado == '1' %}selected{% endif %}>Activo</option>
+                        <option value="0" {% if form.estado == '0' %}selected{% endif %}>Inactivo</option>
+                    </select>
+                    {% if es_propio %}<input type="hidden" name="estado" value="1"><div class="form-text">No puedes desactivar tu propia cuenta.</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2 justify-content-end">
+                <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary-custom">Cancelar</a>
+                <button type="submit" class="btn btn-primary-custom">Guardar cambios</button>
+            </div>
+        </form>
+
+        <hr class="my-4">
+        <div class="table-custom p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <div class="fw-bold">Restablecer contraseña</div>
+                <div class="text-muted" style="font-size:.9rem;">Genera una contraseña temporal nueva. El usuario deberá cambiarla al iniciar sesión.</div>
+            </div>
+            <form method="post" action="{% url 'admin_reset_password' usuario.id_usuario %}"
+                  onsubmit="return confirm('Se generará una contraseña nueva y la actual dejará de funcionar. ¿Continuar?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary-custom"><i class="bi bi-key me-1"></i> Restablecer</button>
+            </form>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebarOverlay');
+    document.getElementById('hamburgerBtn').addEventListener('click', () => { sidebar.classList.toggle('show'); overlay.classList.toggle('show'); });
+    overlay.addEventListener('click', () => { sidebar.classList.remove('show'); overlay.classList.remove('show'); });
+</script>
+{% endblock %}

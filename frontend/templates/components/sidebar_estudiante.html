@@ -1,0 +1,41 @@
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+        <div>
+            <span class="logo-text">da | vinci</span>
+            <div class="logo-sub">EDUCATIVO</div>
+        </div>
+    </div>
+    <ul class="sidebar-nav">
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'actividad' %}active{% endif %}" href="#">
+                <i class="bi bi-house-door"></i>
+                <span>Actividad</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'chat' %}active{% endif %}" href="#">
+                <i class="bi bi-chat-dots"></i>
+                <span>Chat</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'cursos' %}active{% endif %}" href="#">
+                <i class="bi bi-book"></i>
+                <span>Cursos</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'tareas' %}active{% endif %}" href="#">
+                <i class="bi bi-clipboard-check"></i>
+                <span>Tareas</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'examenes' %}active{% endif %}" href="#">
+                <i class="bi bi-file-earmark-text"></i>
+                <span>Examenes</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>

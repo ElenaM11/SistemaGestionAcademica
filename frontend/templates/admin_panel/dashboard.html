@@ -1,157 +1,147 @@
 {% extends 'base.html' %}
 
-{% block title %}Panel de Administracion - Da Vinci{% endblock %}
+{% block title %}Panel de Administración - Da Vinci{% endblock %}
 
 {% block content %}
-{% include 'components/sidebar_admin.html' with active_tab='usuarios' %}
+{% include 'components/topbar.html' with user_name=request.session.usuario_nombre user_role='Administrador' initials=request.session.usuario_iniciales %}
+{% include 'components/sidebar_admin.html' with active_tab='usuarios' active_sub=active_sub %}
 
-<div class="main-content">
-    <!-- Top Navbar -->
-    <nav class="top-navbar">
-        <button class="hamburger-btn" id="hamburgerBtn">
-            <i class="bi bi-list"></i>
-        </button>
-        <div class="search-box">
-            <input type="text" placeholder="Buscar...">
-        </div>
-        <div class="user-info">
-            <div>
-                <div class="user-name">Admin. Da Vinci</div>
-                <div class="user-role">Administrador</div>
-            </div>
-            <div class="user-avatar">AD</div>
-            <a href="{% url 'logout' %}" class="btn-logout">Cerrar sesion</a>
-        </div>
-    </nav>
+<main class="app-main" data-csrf="{{ csrf_token }}">
+    {% if messages %}
+        {% for m in messages %}
+        <div class="alert alert-{% if m.tags == 'error' %}danger{% else %}{{ m.tags }}{% endif %}">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
 
-    <!-- Content -->
-    <div class="p-4">
-        <!-- Banner -->
-        <div class="purple-banner d-flex justify-content-between align-items-center flex-wrap">
-            <div>
-                <h2>Panel de <span class="highlight">administracion</span></h2>
-                <p>Resumen de usuarios del instituto.</p>
-            </div>
-            <a href="{% url 'admin_register_user' %}" class="btn btn-primary-custom">Registrar usuario</a>
+    <div class="purple-banner d-flex justify-content-between align-items-center flex-wrap">
+        <div>
+            <h2>Panel de <span class="highlight">administración</span></h2>
+            <p>Resumen de usuarios del instituto.</p>
         </div>
-
-        <!-- Stats Cards -->
-        <div class="row g-3 mb-4">
-            <div class="col-12 col-sm-6 col-lg-3">
-                <div class="stats-card">
-                    <div class="stat-label">Usuarios activos</div>
-                    <div class="stat-number">128</div>
-                </div>
-            </div>
-            <div class="col-12 col-sm-6 col-lg-3">
-                <div class="stats-card">
-                    <div class="stat-label">Docentes</div>
-                    <div class="stat-number">14</div>
-                </div>
-            </div>
-            <div class="col-12 col-sm-6 col-lg-3">
-                <div class="stats-card">
-                    <div class="stat-label">Estudiantes</div>
-                    <div class="stat-number">111</div>
-                </div>
-            </div>
-            <div class="col-12 col-sm-6 col-lg-3">
-                <div class="stats-card">
-                    <div class="stat-label">Cursos activos</div>
-                    <div class="stat-number">9</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Users Table -->
-        <div class="table-custom">
-            <div class="p-3 border-bottom">
-                <h5 class="mb-0 fw-bold">Usuarios registrados</h5>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-custom mb-0">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Correo</th>
-                            <th>Rol</th>
-                            <th>Acceso</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Mariela Quispe</td>
-                            <td>mariela@davinci.edu.bo</td>
-                            <td><span class="role-badge docente">Docente</span></td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" checked>
-                                </div>
-                            </td>
-                            <td><a href="#" class="action-edit">Editar</a></td>
-                        </tr>
-                        <tr>
-                            <td>Carlos Mamani</td>
-                            <td>carlos@correo.com</td>
-                            <td><span class="role-badge estudiante">Estudiante</span></td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" checked>
-                                </div>
-                            </td>
-                            <td><a href="#" class="action-edit">Editar</a></td>
-                        </tr>
-                        <tr>
-                            <td>Lucia Flores</td>
-                            <td>lucia@correo.com</td>
-                            <td><span class="role-badge estudiante">Estudiante</span></td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" checked>
-                                </div>
-                            </td>
-                            <td><a href="#" class="action-edit">Editar</a></td>
-                        </tr>
-                        <tr>
-                            <td>Diego Choque</td>
-                            <td>diego@davinci.edu.bo</td>
-                            <td><span class="role-badge docente">Docente</span></td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox">
-                                </div>
-                            </td>
-                            <td><a href="#" class="action-edit">Editar</a></td>
-                        </tr>
-                        <tr>
-                            <td>Ana Condori</td>
-                            <td>ana@davinci.edu.bo</td>
-                            <td><span class="role-badge admin">Administrador</span></td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" checked>
-                                </div>
-                            </td>
-                            <td><a href="#" class="action-edit">Editar</a></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <a href="{% url 'admin_register_user' %}" class="btn btn-primary-custom">Registrar usuario</a>
     </div>
-</div>
+
+    <div class="row g-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-xl-5">
+        <div class="col"><div class="stats-card accent-orange">
+            <div class="stat-label">Usuarios activos</div><div class="stat-number">{{ activos }}</div></div></div>
+        <div class="col"><div class="stats-card accent-gray">
+            <div class="stat-label">Usuarios inactivos</div><div class="stat-number">{{ inactivos }}</div></div></div>
+        <div class="col"><div class="stats-card accent-yellow">
+            <div class="stat-label">Docentes</div><div class="stat-number">{{ docentes }}</div></div></div>
+        <div class="col"><div class="stats-card accent-yellow">
+            <div class="stat-label">Estudiantes</div><div class="stat-number">{{ estudiantes }}</div></div></div>
+        <div class="col"><div class="stats-card">
+            <div class="stat-label">Cursos activos</div><div class="stat-number">{{ cursos_activos }}</div></div></div>
+    </div>
+
+    <div class="table-custom">
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="mb-0 fw-bold">Usuarios registrados</h5>
+            <form method="get" class="m-0">
+                {% if rol_filtro %}<input type="hidden" name="rol" value="{{ rol_filtro }}">{% endif %}
+                <select name="estado" class="form-select form-select-sm w-auto" aria-label="Filtrar por estado" onchange="this.form.submit()">
+                    <option value="">Todos los estados</option>
+                    <option value="activo" {% if estado_filtro == 'activo' %}selected{% endif %}>Activos</option>
+                    <option value="inactivo" {% if estado_filtro == 'inactivo' %}selected{% endif %}>Inactivos</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for u in page_obj %}
+                    <tr>
+                        <td>{{ u.nombres }} {{ u.ap_pat }} {{ u.ap_mat }}</td>
+                        <td>{{ u.correo }}</td>
+                        <td>
+                            <span class="role-badge {% if u.rol.nombre|lower == 'docente' %}docente{% elif u.rol.nombre|lower == 'administrador' %}admin{% else %}estudiante{% endif %}">{{ u.rol.nombre }}</span>
+                        </td>
+                        <td>
+                            <div class="estado-cell">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input estado-switch" type="checkbox"
+                                           data-url="{% url 'admin_toggle_estado' u.id_usuario %}"
+                                           {% if u.estado %}checked{% endif %}
+                                           {% if u.id_usuario == request.session.usuario_id %}disabled title="No puedes desactivar tu propia cuenta"{% endif %}>
+                                </div>
+                                <span class="estado-label {% if u.estado %}activo{% else %}inactivo{% endif %}">{% if u.estado %}Activo{% else %}Inactivo{% endif %}</span>
+                            </div>
+                        </td>
+                        <td><a href="{% url 'admin_edit_user' u.id_usuario %}" class="action-edit">Editar</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-4">
+                        {% if rol_filtro or estado_filtro %}No hay usuarios que coincidan con el filtro.{% else %}Todavía no hay usuarios registrados.{% endif %}
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.paginator.count %}
+        <div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="text-muted" style="font-size:.9rem;">
+                Mostrando {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+            </div>
+            {% if page_obj.paginator.num_pages > 1 %}
+            <nav aria-label="Paginación de usuarios">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                        <a class="page-link" {% if page_obj.has_previous %}href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}"{% endif %} aria-label="Anterior">&laquo;</a>
+                    </li>
+                    {% for n in page_range %}
+                        {% if n is None %}
+                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                        {% else %}
+                        <li class="page-item {% if n == page_obj.number %}active{% endif %}">
+                            <a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ n }}">{{ n }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                        <a class="page-link" {% if page_obj.has_next %}href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}"{% endif %} aria-label="Siguiente">&raquo;</a>
+                    </li>
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</main>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    document.getElementById('hamburgerBtn').addEventListener('click', function() {
-        document.getElementById('sidebar').classList.toggle('show');
-        document.getElementById('sidebarOverlay').classList.toggle('show');
-    });
-    document.getElementById('sidebarOverlay').addEventListener('click', function() {
-        document.getElementById('sidebar').classList.remove('show');
-        document.getElementById('sidebarOverlay').classList.remove('show');
+    const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebarOverlay');
+    document.getElementById('hamburgerBtn').addEventListener('click', () => { sidebar.classList.toggle('show'); overlay.classList.toggle('show'); });
+    overlay.addEventListener('click', () => { sidebar.classList.remove('show'); overlay.classList.remove('show'); });
+
+    const csrf = document.querySelector('.app-main').dataset.csrf;
+
+    // Guarda el estado en el servidor y recarga la página actual (mantiene filtro y página)
+    // para que los contadores y el filtro queden siempre correctos.
+    document.querySelectorAll('.estado-switch').forEach(sw => {
+        sw.addEventListener('change', async () => {
+            const quiere = sw.checked;
+            sw.disabled = true;
+            try {
+                const r = await fetch(sw.dataset.url, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'estado=' + (quiere ? '1' : '0'),
+                });
+                const d = await r.json();
+                if (!r.ok || !d.ok) throw new Error(d.error || 'Error');
+                location.reload();
+            } catch (e) {
+                sw.checked = !quiere;
+                sw.disabled = false;
+                alert('No se pudo cambiar el estado. ' + (e.message || ''));
+            }
+        });
     });
 </script>
 {% endblock %}

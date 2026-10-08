@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi perfil - Da Vinci{% endblock %}
+
+{% comment %}
+Contexto esperado desde la vista:
+  es_admin (bool), sidebar_template (ej. 'components/sidebar_docente.html'),
+  nombre_completo, correo, rol_nombre, iniciales, extra (lista de (etiqueta, valor), opcional)
+{% endcomment %}
+
+{% block content %}
+{% if es_admin %}
+    {% include 'components/topbar.html' with user_name=nombre_completo user_role=rol_nombre initials=iniciales %}
+    {% include 'components/sidebar_admin.html' with active_tab='' %}
+    <main class="app-main no-panel">
+{% else %}
+    {% include sidebar_template with active_tab='' %}
+    <div class="main-content">
+        <nav class="top-navbar">
+            <button class="hamburger-btn" id="hamburgerBtn"><i class="bi bi-list"></i></button>
+            <div class="search-box"><input type="text" placeholder="Buscar..."></div>
+            <div class="user-info">
+                <div>
+                    <div class="user-name">{{ nombre_completo }}</div>
+                    <div class="user-role">{{ rol_nombre }}</div>
+                </div>
+                <div class="user-avatar">{{ iniciales }}</div>
+                <a href="{% url 'logout' %}" class="btn-logout">Cerrar sesion</a>
+            </div>
+        </nav>
+        <div class="p-4">
+{% endif %}
+
+        <div class="col-lg-7 col-xl-6">
+            <h3 class="fw-bold mb-1">Mi perfil</h3>
+            <p class="text-muted mb-4">Tus datos de acceso en Da Vinci Educativo.</p>
+
+            {% if messages %}
+                {% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }}">{{ m }}</div>{% endfor %}
+            {% endif %}
+
+            <div class="table-custom">
+                <div class="p-4 d-flex align-items-center gap-3 border-bottom">
+                    <div class="user-avatar" style="width:64px;height:64px;font-size:1.3rem;">{{ iniciales }}</div>
+                    <div>
+                        <div class="fw-bold fs-5">{{ nombre_completo }}</div>
+                        <span class="role-badge">{{ rol_nombre }}</span>
+                    </div>
+                </div>
+                <dl class="row p-4 mb-0">
+                    <dt class="col-sm-4 text-muted fw-normal">Nombre</dt>
+                    <dd class="col-sm-8">{{ nombre_completo }}</dd>
+                    <dt class="col-sm-4 text-muted fw-normal">Correo electrónico</dt>
+                    <dd class="col-sm-8">{{ correo }}</dd>
+                    {% for etiqueta, valor in extra %}
+                    <dt class="col-sm-4 text-muted fw-normal">{{ etiqueta }}</dt>
+                    <dd class="col-sm-8">{{ valor }}</dd>
+                    {% endfor %}
+                </dl>
+            </div>
+
+            <div class="mt-4">
+                <a href="{% url 'cambiar_password' %}" class="btn btn-primary-custom">
+                    <i class="bi bi-key me-1"></i> Cambiar contraseña
+                </a>
+            </div>
+        </div>
+
+{% if es_admin %}
+    </main>
+{% else %}
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const hb = document.getElementById('hamburgerBtn'), sb = document.getElementById('sidebar'), ov = document.getElementById('sidebarOverlay');
+    if (hb && sb) {
+        hb.addEventListener('click', () => { sb.classList.toggle('show'); ov.classList.toggle('show'); });
+        ov.addEventListener('click', () => { sb.classList.remove('show'); ov.classList.remove('show'); });
+    }
+</script>
+{% endblock %}

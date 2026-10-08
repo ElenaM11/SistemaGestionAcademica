@@ -60,6 +60,10 @@ class Usuario(models.Model):
         default=True,
         db_column='Estado'
     )
+    debe_cambiar_password = models.BooleanField(
+        default=False,
+        db_column='DebeCambiarPassword'
+    )
 
     fecha_registro = models.DateTimeField(
         auto_now_add=True,

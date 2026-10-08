@@ -1,35 +1,52 @@
-<div class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-        <div>
-            <span class="logo-text">da | vinci</span>
-            <div class="logo-sub">EDUCATIVO</div>
-        </div>
-    </div>
-    <ul class="sidebar-nav">
-        <li class="nav-item">
-            <a class="nav-link {% if active_tab == 'actividad' %}active{% endif %}" href="#">
-                <i class="bi bi-house-door"></i>
-                <span>Actividad</span>
+<div class="app-nav" id="sidebar">
+    <ul class="rail">
+        <li>
+            <a class="rail-link {% if active_tab == 'actividad' %}active{% endif %}" href="#">
+                <i class="bi bi-bell"></i><span>Actividad</span>
             </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link {% if active_tab == 'usuarios' %}active{% endif %}" href="#">
-                <i class="bi bi-people"></i>
-                <span>Usuarios</span>
+        <li>
+            <a class="rail-link {% if active_tab == 'usuarios' %}active{% endif %}" href="{% url 'admin_dashboard' %}">
+                <i class="bi bi-person"></i><span>Usuarios</span>
             </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link {% if active_tab == 'cursos' %}active{% endif %}" href="#">
-                <i class="bi bi-book"></i>
-                <span>Cursos</span>
+        <li>
+            <a class="rail-link {% if active_tab == 'cursos' %}active{% endif %}" href="#">
+                <i class="bi bi-people"></i><span>Cursos</span>
             </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link {% if active_tab == 'chat' %}active{% endif %}" href="#">
-                <i class="bi bi-chat-dots"></i>
-                <span>Chat</span>
+        <li>
+            <a class="rail-link {% if active_tab == 'chat' %}active{% endif %}" href="#">
+                <i class="bi bi-chat-square"></i><span>Chat</span>
             </a>
         </li>
     </ul>
+
+    {% if active_tab == 'usuarios' %}
+    <aside class="subpanel">
+        <h4>Usuarios</h4>
+        {% if active_sub == 'registrar' %}
+            <a class="sub-item active" href="{% url 'admin_register_user' %}">
+                <span class="chip c-orange">+</span> Registrar usuario
+            </a>
+            <a class="sub-item" href="{% url 'admin_dashboard' %}">
+                <span class="chip c-gray">≡</span> Todos los usuarios
+            </a>
+        {% else %}
+            <a class="sub-item {% if active_sub == 'todos' %}active{% endif %}" href="{% url 'admin_dashboard' %}">
+                <span class="chip c-orange">T</span> Todos
+            </a>
+            <a class="sub-item {% if active_sub == 'administradores' %}active{% endif %}" href="{% url 'admin_dashboard' %}?rol=administrador">
+                <span class="chip c-purple">A</span> Administradores
+            </a>
+            <a class="sub-item {% if active_sub == 'docentes' %}active{% endif %}" href="{% url 'admin_dashboard' %}?rol=docente">
+                <span class="chip c-yellow">D</span> Docentes
+            </a>
+            <a class="sub-item {% if active_sub == 'estudiantes' %}active{% endif %}" href="{% url 'admin_dashboard' %}?rol=estudiante">
+                <span class="chip c-gray">E</span> Estudiantes
+            </a>
+        {% endif %}
+    </aside>
+    {% endif %}
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>

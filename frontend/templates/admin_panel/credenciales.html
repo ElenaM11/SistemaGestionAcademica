@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Credenciales - Da Vinci{% endblock %}
+
+{% block content %}
+{% include 'components/topbar.html' with user_name=request.session.usuario_nombre user_role='Administrador' initials=request.session.usuario_iniciales %}
+{% include 'components/sidebar_admin.html' with active_tab='usuarios' active_sub='' %}
+
+<main class="app-main" data-csrf="{{ csrf_token }}" data-limpiar="{% url 'admin_credenciales_limpiar' %}" data-volver="{% url 'admin_dashboard' %}">
+    <div class="col-lg-8 col-xl-6">
+        <div class="alert alert-success d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-check-circle-fill"></i> <span>{{ cred.titulo }}</span>
+        </div>
+
+        <div class="table-custom">
+            <div class="p-3 border-bottom"><h5 class="mb-0 fw-bold">Credenciales de acceso</h5></div>
+            <dl class="row p-4 mb-0 align-items-center">
+                <dt class="col-sm-4 text-muted fw-normal">Usuario</dt>
+                <dd class="col-sm-8">{{ cred.nombre }} <span class="role-badge ms-1">{{ cred.rol }}</span></dd>
+
+                <dt class="col-sm-4 text-muted fw-normal">Correo</dt>
+                <dd class="col-sm-8">{{ cred.correo }}</dd>
+
+                <dt class="col-sm-4 text-muted fw-normal">Contraseña inicial</dt>
+                <dd class="col-sm-8 mb-0">
+                    <div class="input-group">
+                        <input type="password" class="form-control" value="{{ cred.password }}" readonly style="font-family: monospace;">
+                        <button class="btn btn-outline-secondary" type="button" onclick="togglePassword(this)" aria-label="Mostrar u ocultar contraseña">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </dd>
+            </dl>
+            <div class="px-4 pb-4">
+                <div class="p-3 rounded" style="background:#fff0e8;">
+                    <div class="fw-semibold">{{ cred.aviso1 }}</div>
+                    <div class="text-muted" style="font-size:.9rem;">{{ cred.aviso2 }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2 justify-content-end flex-wrap">
+            <button type="button" id="btnFinalizar" class="btn btn-secondary-custom">Finalizar</button>
+            <button type="button" id="btnPdf" class="btn btn-primary-custom"><i class="bi bi-file-earmark-pdf me-1"></i> Descargar PDF</button>
+        </div>
+        <p class="text-muted mt-3 mb-0" style="font-size:.85rem;" id="nota">
+            Las credenciales se eliminan del sistema al descargar el PDF o al pulsar Finalizar. Después no se podrán volver a ver.
+        </p>
+    </div>
+</main>
+
+{{ cred|json_script:"cred-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+    const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebarOverlay');
+    document.getElementById('hamburgerBtn').addEventListener('click', () => { sidebar.classList.toggle('show'); overlay.classList.toggle('show'); });
+    overlay.addEventListener('click', () => { sidebar.classList.remove('show'); overlay.classList.remove('show'); });
+
+    const main = document.querySelector('.app-main');
+    const cred = JSON.parse(document.getElementById('cred-data').textContent);
+
+    async function limpiarSesion() {
+        try {
+            await fetch(main.dataset.limpiar, { method: 'POST', headers: { 'X-CSRFToken': main.dataset.csrf } });
+        } catch (e) { /* si falla, expira sola en el servidor */ }
+    }
+
+    function generarPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const ORANGE = [255, 90, 0], PURPLE = [91, 42, 134], INK = [17, 24, 39], MUTED = [107, 114, 128];
+        const W = 210, M = 20;
+
+        // Logo
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(32); doc.setTextColor(...ORANGE);
+        doc.text('da | vinci', M, 30);
+        doc.setFontSize(8); doc.text('EDUCATIVO'.split('').join(' '), M + 29, 35);
+        doc.setDrawColor(...ORANGE); doc.setLineWidth(0.8); doc.line(M, 42, W - M, 42);
+
+        // Banda superior morada con título
+        doc.setFillColor(...PURPLE); doc.roundedRect(M, 52, W - 2 * M, 28, 3, 3, 'F');
+        doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
+        doc.text('Credenciales de acceso', M + 8, 64);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+        const fecha = new Date().toLocaleDateString('es-BO', { day: '2-digit', month: 'long', year: 'numeric' });
+        doc.text('Emitido el ' + fecha, M + 8, 72);
+
+        // Confirmación
+        doc.setTextColor(...INK); doc.setFontSize(11);
+        doc.text(cred.titulo, M, 96, { maxWidth: W - 2 * M });
+
+        // Tarjeta de datos
+        const top = 106, h = 74;
+        doc.setDrawColor(229, 231, 238); doc.setLineWidth(0.4); doc.setFillColor(250, 250, 252);
+        doc.roundedRect(M, top, W - 2 * M, h, 3, 3, 'FD');
+
+        const fila = (y, etiqueta, valor, mono) => {
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...MUTED);
+            doc.text(etiqueta, M + 8, y);
+            doc.setTextColor(...INK);
+            doc.setFont(mono ? 'courier' : 'helvetica', mono ? 'bold' : 'normal');
+            doc.setFontSize(mono ? 15 : 12);
+            doc.text(valor, M + 8, y + 7);
+        };
+        fila(top + 12, 'USUARIO'.split('').join(' '), cred.nombre + '  (' + cred.rol + ')');
+        fila(top + 34, 'CORREO'.split('').join(' '), cred.correo);
+        fila(top + 56, 'CONTRASEÑA INICIAL'.split('').join(' ').replace(/ {2}/g, '   '), cred.password, true);
+
+        // Aviso
+        const ay = top + h + 12;
+        doc.setFillColor(255, 240, 232); doc.setDrawColor(...ORANGE); doc.setLineWidth(0.4);
+        doc.roundedRect(M, ay, W - 2 * M, 28, 3, 3, 'FD');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...ORANGE);
+        doc.text('Importante', M + 8, ay + 9);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...INK);
+        doc.text(cred.aviso1, M + 8, ay + 16, { maxWidth: W - 2 * M - 16 });
+        doc.text(cred.aviso2, M + 8, ay + 22, { maxWidth: W - 2 * M - 16 });
+
+        // Pie
+        doc.setDrawColor(229, 231, 238); doc.line(M, 270, W - M, 270);
+        doc.setFontSize(8); doc.setTextColor(...MUTED);
+        doc.text('Documento confidencial. Entrégalo solo a la persona indicada y no lo reenvíes.', M, 277);
+        doc.text('Da Vinci Educativo', W - M, 277, { align: 'right' });
+
+        doc.save('credenciales_' + cred.correo.split('@')[0] + '.pdf');
+    }
+
+    document.getElementById('btnPdf').addEventListener('click', async () => {
+        generarPDF();
+        await limpiarSesion();
+        document.getElementById('btnPdf').disabled = true;
+        document.getElementById('nota').textContent = 'PDF descargado. Las credenciales ya se eliminaron del sistema.';
+    });
+
+    document.getElementById('btnFinalizar').addEventListener('click', async () => {
+        if (!document.getElementById('btnPdf').disabled &&
+            !confirm('Aún no descargaste el PDF. Si finalizas, las credenciales no se podrán volver a ver. ¿Finalizar?')) return;
+        await limpiarSesion();
+        location.href = main.dataset.volver;
+    });
+</script>
+{% endblock %}

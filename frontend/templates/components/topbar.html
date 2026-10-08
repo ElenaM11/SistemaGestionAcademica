@@ -1,0 +1,22 @@
+<header class="app-topbar">
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="Abrir menú">
+        <i class="bi bi-list"></i>
+    </button>
+    <a class="brand" href="#">
+        <span class="logo-text">da | vinci</span>
+        <div class="logo-sub">EDUCATIVO</div>
+    </a>
+    <div class="search-box">
+        <input type="text" placeholder="Buscar">
+    </div>
+    <div class="user-info">
+        <a href="{% url 'perfil' %}" class="profile-link" title="Mi perfil">
+            <div>
+                <div class="user-name">{{ user_name|default:'Admin. Da Vinci' }}</div>
+                <div class="user-role">{{ user_role|default:'Administrador' }}</div>
+            </div>
+            <div class="user-avatar">{{ initials|default:'AD' }}</div>
+        </a>
+        <a href="{% url 'logout' %}" class="btn-logout">Cerrar sesión</a>
+    </div>
+</header>

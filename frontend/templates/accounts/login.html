@@ -20,12 +20,17 @@
             <form method="post" action="{% url 'login' %}">
                 {% csrf_token %}
                 <div class="mb-3">
-                    <label for="email" class="form-label">Correo electronico</label>
-                    <input type="email" class="form-control" id="email" name="email" placeholder="nombre@correo.com" required>
+                    <label for="correo" class="form-label">Correo electronico</label>
+                    <input type="email" class="form-control" id="correo" name="correo" placeholder="nombre@correo.com" required>
                 </div>
                 <div class="mb-4">
                     <label for="password" class="form-label">Contrasena</label>
-                    <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+                        <button class="btn btn-outline-secondary" type="button" onclick="togglePassword(this)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-login">Iniciar sesion</button>
             </form>
