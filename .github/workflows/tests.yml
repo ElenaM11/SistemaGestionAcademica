@@ -1,0 +1,60 @@
+name: Tests
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_davinci_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Instalar dependencias
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ejecutar pruebas
+        env:
+          SECRET_KEY: 'test-secret-key-for-ci'
+          DEBUG: 'True'
+          DB_NAME: 'test_davinci_db'
+          DB_USER: 'postgres'
+          DB_PASSWORD: 'postgres'
+          DB_HOST: 'localhost'
+          DB_PORT: '5432'
+        run: |
+          cd backend
+          pytest tests/ -v
+
+      - name: Reporte de cobertura
+        if: always()
+        run: |
+          cd backend
+          coverage run -m pytest tests/
+          coverage report
