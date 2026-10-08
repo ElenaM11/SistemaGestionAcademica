@@ -114,26 +114,18 @@ def _guardar_credenciales(request, usuario, password, titulo):
         'aviso2': f'El {rol.lower()} deberá cambiar la contraseña al primer inicio de sesión.',
         'creado': time.time(),
     }
-
-
-# ============================================================
 # AUTENTICACIÓN
-# ============================================================
-
 def login_view(request):
     """Vista de inicio de sesión."""
     if request.method == 'POST':
         correo = request.POST.get('correo')
         password = request.POST.get('password')
-
         try:
             usuario = Usuario.objects.get(correo=correo, estado=True)
         except Usuario.DoesNotExist:
             messages.error(request, 'Correo o contraseña incorrectos')
             return render(request, 'accounts/login.html')
-
         resultado = check_password(password, usuario.password_hash)
-
         if resultado:
             # Guardamos datos en la sesión
             request.session['usuario_id'] = usuario.id_usuario
@@ -141,11 +133,9 @@ def login_view(request):
             request.session['usuario_rol'] = usuario.rol.nombre
             request.session['usuario_iniciales'] = (usuario.nombres[:1] + usuario.ap_pat[:1]).upper()
             request.session['debe_cambiar_password'] = usuario.debe_cambiar_password
-
             # Si el admin lo obligó a cambiar contraseña, lo mandamos ahí primero
             if usuario.debe_cambiar_password:
                 return redirect('cambiar_password')
-
             # Redirigir según el rol
             rol = usuario.rol.nombre.lower()
             if rol == 'administrador':
@@ -160,7 +150,6 @@ def login_view(request):
         else:
             messages.error(request, 'Correo o contraseña incorrectos')
             return render(request, 'accounts/login.html')
-
     return render(request, 'accounts/login.html')
 
 
@@ -179,21 +168,17 @@ def admin_register_user(request):
     if not _es_admin(request):
         messages.error(request, 'No tienes permisos para acceder aquí')
         return redirect('login')
-
     if request.method != 'POST':
         return _form_registro(request)
-
     p = request.POST
     nombres, ap_pat, ap_mat = p.get('nombres', '').strip(), p.get('ap_pat', '').strip(), p.get('ap_mat', '').strip()
     ci, telefono = p.get('ci', '').strip(), p.get('telefono', '').strip()
-
     try:
         rol = Rol.objects.get(id=p.get('rol'))
     except (Rol.DoesNotExist, ValueError):
         messages.error(request, 'Rol inválido')
         return _form_registro(request, p)
     rol_nombre = rol.nombre.lower()
-
     # Validaciones de unicidad
     if Usuario.objects.filter(ci=ci).exists():
         messages.error(request, 'Ya existe un usuario con ese carnet de identidad')
@@ -201,7 +186,6 @@ def admin_register_user(request):
     if Usuario.objects.filter(telefono=telefono).exists():
         messages.error(request, 'Ya existe un usuario con ese número de teléfono')
         return _form_registro(request, p)
-
     # Validaciones específicas por rol
     if rol_nombre == 'estudiante':
         if not all(p.get(c, '').strip() for c in ('fecha_nacimiento', 'contacto_emergencia', 'telefono_emergencia')):
@@ -210,10 +194,8 @@ def admin_register_user(request):
     elif rol_nombre == 'docente' and not p.get('especialidad', '').strip():
         messages.error(request, 'Indica la especialidad del docente')
         return _form_registro(request, p)
-
     # El sistema genera la contraseña
     password = generar_password()
-
     # Crear usuario (reintenta si choca el código)
     for _ in range(3):
         try:
@@ -381,6 +363,13 @@ def admin_reset_password(request, id_usuario):
 
 def _validar_password_segura(password, usuario=None):
     """Valida que la contraseña cumpla con los requisitos mínimos."""
+
+    # ⬇️ PRIMERO: validar que no sea una contraseña común
+    comunes = ['12345678', 'password', 'qwerty123', 'admin123', '123456789', 'password123']
+    if password.lower() in comunes:
+        return False, 'Esa contraseña es demasiado común. Elige otra.'
+
+    # ⬇️ DESPUÉS: las demás validaciones
     if len(password) < 8:
         return False, 'La contraseña debe tener al menos 8 caracteres.'
     if not re.search(r'[A-Z]', password):
@@ -391,10 +380,6 @@ def _validar_password_segura(password, usuario=None):
         return False, 'La contraseña debe tener al menos un número.'
     if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-]', password):
         return False, 'La contraseña debe tener al menos un símbolo (!@#$%^&*).'
-
-    comunes = ['12345678', 'password', 'qwerty123', 'admin123', '123456789', 'password123']
-    if password.lower() in comunes:
-        return False, 'Esa contraseña es demasiado común. Elige otra.'
 
     if usuario:
         if usuario.nombres and usuario.nombres.lower() in password.lower():
