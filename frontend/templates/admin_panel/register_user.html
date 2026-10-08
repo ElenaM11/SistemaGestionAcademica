@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Registrar Usuario - Da Vinci{% endblock %}
+
+{% block content %}
+{% include 'components/sidebar_admin.html' with active_tab='usuarios' %}
+
+<div class="main-content">
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+        <button class="hamburger-btn" id="hamburgerBtn">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="search-box">
+            <input type="text" placeholder="Buscar...">
+        </div>
+        <div class="user-info">
+            <div>
+                <div class="user-name">Admin. Da Vinci</div>
+                <div class="user-role">Administrador</div>
+            </div>
+            <div class="user-avatar">AD</div>
+            <a href="{% url 'logout' %}" class="btn-logout">Cerrar sesion</a>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="p-4">
+        <div class="row">
+            <div class="col-lg-8">
+                <h3 class="fw-bold mb-1">Registrar usuario</h3>
+                <p class="text-muted mb-4">Complete los datos y elija el rol para habilitar su acceso.</p>
+
+                <form method="post" action="{% url 'admin_register_user' %}">
+                    {% csrf_token %}
+
+                    <!-- Role Selector -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Rol</label>
+                        <div class="role-selector">
+                            <div class="role-btn" data-role="admin" onclick="selectRole(this)">
+                                Administrador
+                            </div>
+                            <div class="role-btn active" data-role="docente" onclick="selectRole(this)">
+                                Docente
+                            </div>
+                            <div class="role-btn" data-role="estudiante" onclick="selectRole(this)">
+                                Estudiante
+                            </div>
+                        </div>
+                        <input type="hidden" name="role" id="selectedRole" value="docente">
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="nombres" class="form-label fw-bold">Nombres</label>
+                            <input type="text" class="form-control" id="nombres" name="nombres" value="Mariela" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="apellidos" class="form-label fw-bold">Apellidos</label>
+                            <input type="text" class="form-control" id="apellidos" name="apellidos" value="Quispe Mamani" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="correo" class="form-label fw-bold">Correo electronico</label>
+                            <input type="email" class="form-control" id="correo" name="correo" value="mariela@davinci.edu.bo" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="carnet" class="form-label fw-bold">Carnet de identidad</label>
+                            <input type="text" class="form-control" id="carnet" name="carnet" value="7845123 LP" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="telefono" class="form-label fw-bold">Telefono</label>
+                            <input type="tel" class="form-control" id="telefono" name="telefono" value="70012345" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="password" class="form-label fw-bold">Contrasena inicial</label>
+                            <input type="password" class="form-control" id="password" name="password" value="••••••••" required>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-2 justify-content-end">
+                        <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary-custom">Cancelar</a>
+                        <button type="submit" class="btn btn-primary-custom">Registrar usuario</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function selectRole(el) {
+        document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('selectedRole').value = el.dataset.role;
+    }
+
+    document.getElementById('hamburgerBtn').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('show');
+        document.getElementById('sidebarOverlay').classList.toggle('show');
+    });
+    document.getElementById('sidebarOverlay').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.remove('show');
+        document.getElementById('sidebarOverlay').classList.remove('show');
+    });
+</script>
+{% endblock %}

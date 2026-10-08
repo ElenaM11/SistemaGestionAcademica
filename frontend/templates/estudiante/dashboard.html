@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Cursos - Estudiante - Da Vinci{% endblock %}
+
+{% block content %}
+{% include 'components/sidebar_estudiante.html' with active_tab='cursos' %}
+
+<div class="main-content">
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+        <button class="hamburger-btn" id="hamburgerBtn">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="search-box">
+            <input type="text" placeholder="Buscar...">
+        </div>
+        <div class="user-info">
+            <div>
+                <div class="user-name">Valeria Condori</div>
+                <div class="user-role">Estudiante</div>
+            </div>
+            <div class="user-avatar">VC</div>
+            <a href="{% url 'logout' %}" class="btn-logout">Cerrar sesion</a>
+        </div>
+    </nav>
+
+    <div class="d-flex" style="min-height: calc(100vh - 65px);">
+        <!-- Course Sidebar -->
+        <div class="p-3 border-end" style="width: 260px; flex-shrink: 0; background: white;">
+            <h6 class="fw-bold mb-3 px-2">Mis cursos</h6>
+            <a href="#" class="course-list-item active">
+                <div class="course-badge bg-orange">A2</div>
+                <div class="course-info">
+                    <div class="course-name">Ingles A2 - Manana</div>
+                </div>
+            </a>
+            <a href="#" class="course-list-item">
+                <div class="course-badge bg-purple">A1</div>
+                <div class="course-info">
+                    <div class="course-name">Frances A1 - Tarde</div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-grow-1 p-4">
+            <!-- Banner -->
+            <div class="purple-banner">
+                <h2>Hola, <em>Valeria</em></h2>
+                <p>Ingles A2 - Turno manana - Docente: Mariela Quispe</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-md-4">
+                    <div class="stats-card">
+                        <div class="stat-label">Tareas pendientes</div>
+                        <div class="stat-number">3</div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="stats-card">
+                        <div class="stat-label">Asistencia</div>
+                        <div class="stat-number">92%</div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="stats-card">
+                        <div class="stat-label">Promedio</div>
+                        <div class="stat-number">84</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <!-- Upcoming Assignments -->
+                <div class="col-12 col-lg-7">
+                    <div class="table-custom h-100">
+                        <div class="p-3 border-bottom">
+                            <h6 class="mb-0 fw-bold">Proximas entregas</h6>
+                        </div>
+                        <div class="p-3">
+                            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                <div>
+                                    <div class="fw-semibold">Present simple</div>
+                                </div>
+                                <div class="text-muted" style="font-size: 0.85rem;">Vie 9 oct</div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                <div>
+                                    <div class="fw-semibold">Vocabulario unidad 3</div>
+                                </div>
+                                <div class="text-muted" style="font-size: 0.85rem;">Lun 12 oct</div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center py-2">
+                                <div>
+                                    <div class="fw-semibold">Audio: presentarte</div>
+                                </div>
+                                <div class="text-muted" style="font-size: 0.85rem;">Mie 14 oct</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teacher Notices -->
+                <div class="col-12 col-lg-5">
+                    <div class="table-custom h-100">
+                        <div class="p-3 border-bottom">
+                            <h6 class="mb-0 fw-bold">Avisos del docente</h6>
+                        </div>
+                        <div class="p-3">
+                            <p class="mb-0" style="font-size: 0.9rem; color: var(--color-text-muted);">
+                                La clase de manana empieza a las 08:00. Trae tu cuaderno de ejercicios.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('hamburgerBtn').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('show');
+        document.getElementById('sidebarOverlay').classList.toggle('show');
+    });
+    document.getElementById('sidebarOverlay').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.remove('show');
+        document.getElementById('sidebarOverlay').classList.remove('show');
+    });
+</script>
+{% endblock %}

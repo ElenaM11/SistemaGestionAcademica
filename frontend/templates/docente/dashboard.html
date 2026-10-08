@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Cursos - Docente - Da Vinci{% endblock %}
+
+{% block content %}
+{% include 'components/sidebar_docente.html' with active_tab='cursos' %}
+
+<div class="main-content">
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+        <button class="hamburger-btn" id="hamburgerBtn">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="search-box">
+            <input type="text" placeholder="Buscar...">
+        </div>
+        <div class="user-info">
+            <div>
+                <div class="user-name">Mariela Quispe</div>
+                <div class="user-role">Docente</div>
+            </div>
+            <div class="user-avatar">MQ</div>
+            <a href="{% url 'logout' %}" class="btn-logout">Cerrar sesion</a>
+        </div>
+    </nav>
+
+    <div class="d-flex" style="min-height: calc(100vh - 65px);">
+        <!-- Course Sidebar -->
+        <div class="p-3 border-end" style="width: 260px; flex-shrink: 0; background: white;">
+            <h6 class="fw-bold mb-3 px-2">Mis cursos</h6>
+            <a href="#" class="course-list-item active">
+                <div class="course-badge bg-orange">A2</div>
+                <div class="course-info">
+                    <div class="course-name">Ingles A2 - Manana</div>
+                </div>
+            </a>
+            <a href="#" class="course-list-item">
+                <div class="course-badge bg-dark">B1</div>
+                <div class="course-info">
+                    <div class="course-name">Ingles B1 - Tarde</div>
+                </div>
+            </a>
+            <a href="#" class="course-list-item">
+                <div class="course-badge bg-purple">A1</div>
+                <div class="course-info">
+                    <div class="course-name">Portugues A1 - Noche</div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-grow-1 p-4">
+            <!-- Banner -->
+            <div class="purple-banner d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <h2>Hola, <em>Mariela</em></h2>
+                    <p>Ingles A2 - Turno manana</p>
+                </div>
+                <a href="#" class="btn btn-primary-custom">Iniciar clase</a>
+            </div>
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs mb-4 border-0">
+                <li class="nav-item">
+                    <a class="nav-link active fw-bold border-0" style="color: var(--color-text); border-bottom: 3px solid var(--color-orange) !important;" href="#">Resumen</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-muted" href="#">Tareas</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-muted" href="#">Estudiantes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-muted" href="#">Asistencia</a>
+                </li>
+            </ul>
+
+            <!-- Stats -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-md-4">
+                    <div class="stats-card">
+                        <div class="stat-label">Estudiantes inscritos</div>
+                        <div class="stat-number">18</div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="stats-card">
+                        <div class="stat-label">Entregas por revisar</div>
+                        <div class="stat-number">6</div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="stats-card">
+                        <div class="stat-label">Proxima clase</div>
+                        <div class="stat-number" style="font-size: 1.3rem;">Hoy 08:00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Submissions -->
+            <div class="table-custom">
+                <div class="p-3 border-bottom">
+                    <h6 class="mb-0 fw-bold">Entregas recientes</h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th>Estudiante</th>
+                                <th>Tarea</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Carlos Mamani</td>
+                                <td>Present simple</td>
+                                <td><span class="status-badge pending">Por revisar</span></td>
+                            </tr>
+                            <tr>
+                                <td>Lucia Flores</td>
+                                <td>Present simple</td>
+                                <td><span class="status-badge pending">Por revisar</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('hamburgerBtn').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('show');
+        document.getElementById('sidebarOverlay').classList.toggle('show');
+    });
+    document.getElementById('sidebarOverlay').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.remove('show');
+        document.getElementById('sidebarOverlay').classList.remove('show');
+    });
+</script>
+{% endblock %}

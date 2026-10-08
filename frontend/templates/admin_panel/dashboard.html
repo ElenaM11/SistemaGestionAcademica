@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Administracion - Da Vinci{% endblock %}
+
+{% block content %}
+{% include 'components/sidebar_admin.html' with active_tab='usuarios' %}
+
+<div class="main-content">
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+        <button class="hamburger-btn" id="hamburgerBtn">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="search-box">
+            <input type="text" placeholder="Buscar...">
+        </div>
+        <div class="user-info">
+            <div>
+                <div class="user-name">Admin. Da Vinci</div>
+                <div class="user-role">Administrador</div>
+            </div>
+            <div class="user-avatar">AD</div>
+            <a href="{% url 'logout' %}" class="btn-logout">Cerrar sesion</a>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="p-4">
+        <!-- Banner -->
+        <div class="purple-banner d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h2>Panel de <span class="highlight">administracion</span></h2>
+                <p>Resumen de usuarios del instituto.</p>
+            </div>
+            <a href="{% url 'admin_register_user' %}" class="btn btn-primary-custom">Registrar usuario</a>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stats-card">
+                    <div class="stat-label">Usuarios activos</div>
+                    <div class="stat-number">128</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stats-card">
+                    <div class="stat-label">Docentes</div>
+                    <div class="stat-number">14</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stats-card">
+                    <div class="stat-label">Estudiantes</div>
+                    <div class="stat-number">111</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stats-card">
+                    <div class="stat-label">Cursos activos</div>
+                    <div class="stat-number">9</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="table-custom">
+            <div class="p-3 border-bottom">
+                <h5 class="mb-0 fw-bold">Usuarios registrados</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                            <th>Rol</th>
+                            <th>Acceso</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Mariela Quispe</td>
+                            <td>mariela@davinci.edu.bo</td>
+                            <td><span class="role-badge docente">Docente</span></td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked>
+                                </div>
+                            </td>
+                            <td><a href="#" class="action-edit">Editar</a></td>
+                        </tr>
+                        <tr>
+                            <td>Carlos Mamani</td>
+                            <td>carlos@correo.com</td>
+                            <td><span class="role-badge estudiante">Estudiante</span></td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked>
+                                </div>
+                            </td>
+                            <td><a href="#" class="action-edit">Editar</a></td>
+                        </tr>
+                        <tr>
+                            <td>Lucia Flores</td>
+                            <td>lucia@correo.com</td>
+                            <td><span class="role-badge estudiante">Estudiante</span></td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked>
+                                </div>
+                            </td>
+                            <td><a href="#" class="action-edit">Editar</a></td>
+                        </tr>
+                        <tr>
+                            <td>Diego Choque</td>
+                            <td>diego@davinci.edu.bo</td>
+                            <td><span class="role-badge docente">Docente</span></td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox">
+                                </div>
+                            </td>
+                            <td><a href="#" class="action-edit">Editar</a></td>
+                        </tr>
+                        <tr>
+                            <td>Ana Condori</td>
+                            <td>ana@davinci.edu.bo</td>
+                            <td><span class="role-badge admin">Administrador</span></td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked>
+                                </div>
+                            </td>
+                            <td><a href="#" class="action-edit">Editar</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('hamburgerBtn').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('show');
+        document.getElementById('sidebarOverlay').classList.toggle('show');
+    });
+    document.getElementById('sidebarOverlay').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.remove('show');
+        document.getElementById('sidebarOverlay').classList.remove('show');
+    });
+</script>
+{% endblock %}
