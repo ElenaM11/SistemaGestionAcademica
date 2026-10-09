@@ -2,6 +2,7 @@ from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.shortcuts import render, redirect
 from usuarios.models import Usuario
+from cursos.models import Curso
 
 USUARIOS_POR_PAGINA = 10
 ROLES_FILTRO = {
@@ -77,7 +78,7 @@ def admin_dashboard(request):
         'estado_filtro': estado,
         'q': q,
         'active_sub': ROLES_FILTRO[rol],
-        'cursos_activos': 0,   # conectar cuando exista el modelo de cursos
+        'cursos_activos': Curso.objects.filter(activo=True).count(),
         **stats,
     }
 

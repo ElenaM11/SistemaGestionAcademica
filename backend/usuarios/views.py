@@ -174,7 +174,7 @@ def admin_register_user(request):
     nombres, ap_pat, ap_mat = p.get('nombres', '').strip(), p.get('ap_pat', '').strip(), p.get('ap_mat', '').strip()
     ci, telefono = p.get('ci', '').strip(), p.get('telefono', '').strip()
     try:
-        rol = Rol.objects.get(id=p.get('rol'))
+        rol = Rol.objects.get(pk=p.get('rol'))
     except (Rol.DoesNotExist, ValueError):
         messages.error(request, 'Rol inválido')
         return _form_registro(request, p)

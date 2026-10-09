@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Asignar docente - Da Vinci{% endblock %}
+{% block content %}
+{% include 'components/topbar.html' with user_name=request.session.usuario_nombre user_role='Administrador' initials=request.session.usuario_iniciales %}
+{% include 'components/sidebar_admin.html' with active_tab='cursos' %}
+<main class="main-content main-content--courses">
+    <div class="d-flex flex-column flex-lg-row min-vh-100">
+        <aside class="course-subnav p-3 border-end bg-white">
+            <h5 class="fw-bold mb-3 px-2">Cursos</h5>
+            <a href="{% url 'admin_paralelos' %}" class="course-list-item active"><div class="course-badge bg-orange">P</div><div class="course-info"><div class="course-name">Paralelos</div></div></a>
+            <a href="{% url 'admin_catalogo_cursos' %}" class="course-list-item"><div class="course-badge bg-purple">C</div><div class="course-info"><div class="course-name">Catálogo de cursos</div></div></a>
+            <a href="{% url 'admin_inscripciones' %}" class="course-list-item"><div class="course-badge bg-orange">I</div><div class="course-info"><div class="course-name">Inscripciones</div></div></a>
+            <a href="{% url 'admin_catalogos' %}" class="course-list-item"><div class="course-badge bg-purple">+</div><div class="course-info"><div class="course-name">Configurar catálogos</div></div></a>
+        </aside>
+        <section class="flex-grow-1 p-3 p-lg-4">
+            {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">{{ message }}<button class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
+            <div class="mb-4"><h3 class="fw-bold mb-1">Asignar docente</h3><p class="text-muted mb-1">{{ paralelo.codigo }} · {{ paralelo.curso.nombre }} · {{ paralelo.turno.nombre }}</p><p class="text-muted mb-0">{{ paralelo.curso.idioma.nombre }} · {% for horario in horarios %}{{ horario.dia_semana }} {{ horario.hora_inicio|time:'H:i' }}–{{ horario.hora_fin|time:'H:i' }}{% if not forloop.last %}; {% endif %}{% endfor %}</p></div>
+            <div class="row g-4 align-items-start">
+                <div class="col-12 col-xl-7"><div class="table-custom p-4"><form method="post">{% csrf_token %}
+                    <div class="mb-3"><label class="form-label fw-bold" for="docente">Docente habilitado para {{ paralelo.curso.idioma.nombre }}</label><select class="form-select" id="docente" name="id_docente" required><option value="">Selecciona un docente</option>{% for docente in docentes %}<option value="{{ docente.pk }}" data-sin-cruce="{{ docente.sin_cruce|yesno:'true,false' }}" {% if docente.pk|stringformat:'s' == docente_seleccionado %}selected{% endif %}>{{ docente.usuario.nombres }} {{ docente.usuario.ap_pat }} {{ docente.usuario.ap_mat }} · {{ docente.usuario.correo }}</option>{% empty %}<option value="" disabled>No hay docentes habilitados para este idioma.</option>{% endfor %}</select></div>
+                    <div class="teacher-checks mb-4" id="teacherChecks" data-habilitado="{{ docente_habilitado_idioma|yesno:'true,false' }}" data-sin-cruce="{{ docente_sin_cruce|yesno:'true,false' }}"><div class="teacher-check teacher-check-language">{% if docente_habilitado_idioma %}✓{% else %}○{% endif %} Enseña {{ paralelo.curso.idioma.nombre }}</div><div class="teacher-check teacher-check-schedule">{% if docente_seleccionado_obj %}{% if docente_sin_cruce %}✓ Sin cruces de horario{% else %}✕ Tiene cruces de horario{% endif %}{% else %}Selecciona un docente para revisar sus horarios{% endif %}</div></div>
+                    <div class="row g-3 mb-4"><div class="col-md-6"><label class="form-label fw-bold">Modalidad</label><input class="form-control" name="modalidad" maxlength="50" value="{% if form_data.modalidad %}{{ form_data.modalidad }}{% else %}{{ paralelo.modalidad|default:'' }}{% endif %}"></div><div class="col-md-6"><label class="form-label fw-bold">Aula</label><input class="form-control" name="aula" maxlength="100" value="{% if form_data.aula %}{{ form_data.aula }}{% else %}{{ paralelo.aula|default:'' }}{% endif %}"></div><div class="col-md-6"><label class="form-label fw-bold">Inicio</label><input class="form-control" type="date" name="fecha_inicio" value="{% if form_data.fecha_inicio %}{{ form_data.fecha_inicio }}{% else %}{{ paralelo.fecha_inicio|date:'Y-m-d' }}{% endif %}"></div><div class="col-md-6"><label class="form-label fw-bold">Fin</label><input class="form-control" type="date" name="fecha_fin" value="{% if form_data.fecha_fin %}{{ form_data.fecha_fin }}{% else %}{{ paralelo.fecha_fin|date:'Y-m-d' }}{% endif %}"></div></div>
+                    <div class="d-flex justify-content-end gap-2"><a class="btn btn-secondary-custom" href="{% url 'admin_paralelos' %}">Cancelar</a><button class="btn btn-primary-custom" type="submit">Asignar docente</button></div>
+                </form></div></div>
+                <div class="col-12 col-xl-5"><div class="table-custom p-4"><h5 class="fw-bold mb-3">Paralelos de {% if docente_seleccionado_obj %}{{ docente_seleccionado_obj.usuario.nombres }}{% else %}este docente{% endif %}</h5>{% for asignado in paralelos_docente %}<div class="border-bottom py-2"><div class="fw-semibold">{{ asignado.curso.nombre }} · {{ asignado.turno.nombre }}</div><small class="text-muted">{{ asignado.codigo }}</small></div>{% empty %}<p class="text-muted mb-0">No tiene otros paralelos asignados.</p>{% endfor %}</div></div>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}
+{% block extra_js %}<script>
+document.getElementById('hamburgerBtn')?.addEventListener('click',()=>{document.getElementById('sidebar')?.classList.toggle('show');document.getElementById('sidebarOverlay')?.classList.toggle('show')});
+const docenteSelect=document.getElementById('docente');
+const teacherChecks=document.getElementById('teacherChecks');
+function actualizarIndicadoresDocente(){
+    const opcion=docenteSelect?.selectedOptions[0];
+    const habilitado=Boolean(opcion?.value);
+    const sinCruce=opcion?.dataset.sinCruce==='true';
+    teacherChecks.dataset.habilitado=habilitado?'true':'false';
+    teacherChecks.dataset.sinCruce=sinCruce?'true':'false';
+    teacherChecks.querySelector('.teacher-check-language').textContent=habilitado?'✓ Enseña el idioma del curso':'○ Selecciona un docente habilitado';
+    teacherChecks.querySelector('.teacher-check-schedule').textContent=habilitado?(sinCruce?'✓ Sin cruces de horario':'✕ Tiene cruces de horario'):'Selecciona un docente para revisar sus horarios';
+}
+docenteSelect?.addEventListener('change',actualizarIndicadoresDocente);
+actualizarIndicadoresDocente();
+</script>{% endblock %}

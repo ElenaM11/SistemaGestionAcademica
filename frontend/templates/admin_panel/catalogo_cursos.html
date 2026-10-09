@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Catálogo de cursos - Da Vinci{% endblock %}
+{% block content %}
+{% include 'components/topbar.html' with user_name=request.session.usuario_nombre user_role='Administrador' initials=request.session.usuario_iniciales %}
+{% include 'components/sidebar_admin.html' with active_tab='cursos' %}
+<main class="main-content main-content--courses">
+    <div class="d-flex flex-column flex-lg-row min-vh-100">
+        <aside class="course-subnav p-3 border-end bg-white">
+            <h5 class="fw-bold mb-3 px-2">Cursos</h5>
+            <a href="{% url 'admin_paralelos' %}" class="course-list-item"><div class="course-badge bg-orange">P</div><div class="course-info"><div class="course-name">Paralelos</div></div></a>
+            <a href="{% url 'admin_catalogo_cursos' %}" class="course-list-item active"><div class="course-badge bg-purple">C</div><div class="course-info"><div class="course-name">Catálogo de cursos</div></div></a>
+            <a href="{% url 'admin_inscripciones' %}" class="course-list-item"><div class="course-badge bg-orange">I</div><div class="course-info"><div class="course-name">Inscripciones</div></div></a>
+            <a href="{% url 'admin_catalogos' %}" class="course-list-item"><div class="course-badge bg-purple">+</div><div class="course-info"><div class="course-name">Configurar catálogos</div></div></a>
+        </aside>
+        <section class="flex-grow-1 p-3 p-lg-4">
+            {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">{{ message }}<button class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
+            <div class="mb-4"><h3 class="fw-bold mb-1">Catálogo de cursos</h3><p class="text-muted mb-0">Idiomas y niveles que ofrece el instituto.</p></div>
+            <div class="row g-4 align-items-start">
+                <div class="col-12 col-xxl-7">
+                    <div class="table-custom">
+                        <div class="table-responsive"><table class="table table-custom mb-0">
+                            <thead><tr><th>Curso</th><th>Idioma</th><th>Nivel</th><th>Estado</th><th>Acciones</th></tr></thead>
+                            <tbody>{% for curso in cursos %}
+                                <tr><td>{{ curso.nombre }}</td><td>{{ curso.idioma.nombre }}</td><td>{{ curso.nivel.codigo }}</td><td>{% if curso.activo %}<span class="badge bg-success bg-opacity-10 text-success">Activo</span>{% else %}<span class="badge bg-secondary bg-opacity-10 text-secondary">Inactivo</span>{% endif %}</td><td><div class="d-flex gap-2"><a class="action-edit" href="?editar={{ curso.id_curso }}">Editar</a><form method="post">{% csrf_token %}<input type="hidden" name="id_curso" value="{{ curso.id_curso }}"><input type="hidden" name="activo" value="{% if curso.activo %}0{% else %}1{% endif %}"><button class="btn btn-sm btn-link p-0" type="submit">{% if curso.activo %}Desactivar{% else %}Activar{% endif %}</button></form></div></td></tr>
+                            {% empty %}<tr><td colspan="5" class="text-center text-muted py-5">Todavía no hay cursos registrados.</td></tr>{% endfor %}</tbody>
+                        </table></div>
+                    </div>
+                </div>
+                <div class="col-12 col-xxl-5">
+                    <div class="table-custom p-4">
+                        <h5 class="fw-bold mb-3">{% if curso_editar %}Editar curso{% else %}Nuevo curso{% endif %}</h5>
+                        {% if not idiomas or not niveles %}<div class="alert alert-info">Agrega idiomas y niveles antes de crear cursos. <a href="{% url 'admin_catalogos' %}">Configurar catálogos</a>.</div>{% endif %}
+                        <form method="post">{% csrf_token %}
+                            {% if curso_editar %}<input type="hidden" name="id_curso" value="{{ curso_editar.id_curso }}">{% endif %}
+                            <div class="mb-3"><label class="form-label fw-bold" for="idioma">Idioma</label><select class="form-select" id="idioma" name="idioma" required><option value="">Selecciona un idioma</option>{% for idioma in idiomas %}<option value="{{ idioma.id_idioma }}" {% if curso_editar.idioma_id == idioma.id_idioma or form_data.idioma == idioma.id_idioma|stringformat:'s' %}selected{% endif %}>{{ idioma.nombre }}</option>{% endfor %}</select></div>
+                            <div class="mb-3"><label class="form-label fw-bold" for="nivel">Nivel</label><select class="form-select" id="nivel" name="nivel" required><option value="">Selecciona un nivel</option>{% for nivel in niveles %}<option value="{{ nivel.id_nivel }}" {% if curso_editar.nivel_id == nivel.id_nivel or form_data.nivel == nivel.id_nivel|stringformat:'s' %}selected{% endif %}>{{ nivel.codigo }}</option>{% endfor %}</select></div>
+                            <div class="mb-3"><label class="form-label fw-bold" for="nombre">Nombre del curso</label><input class="form-control" id="nombre" name="nombre" maxlength="150" value="{% if form_data.nombre %}{{ form_data.nombre }}{% else %}{{ curso_editar.nombre|default:'' }}{% endif %}" required></div>
+                            <div class="mb-3"><label class="form-label fw-bold" for="descripcion">Descripción</label><textarea class="form-control" id="descripcion" name="descripcion" rows="3">{% if form_data.descripcion %}{{ form_data.descripcion }}{% else %}{{ curso_editar.descripcion|default:'' }}{% endif %}</textarea></div>
+                            <div class="d-flex justify-content-end gap-2">{% if curso_editar %}<a class="btn btn-secondary-custom" href="{% url 'admin_catalogo_cursos' %}">Cancelar</a>{% endif %}<button class="btn btn-primary-custom" type="submit" {% if not idiomas or not niveles %}disabled{% endif %}>{% if curso_editar %}Guardar cambios{% else %}Guardar curso{% endif %}</button></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}
+{% block extra_js %}<script>document.getElementById('hamburgerBtn')?.addEventListener('click',()=>{document.getElementById('sidebar')?.classList.toggle('show');document.getElementById('sidebarOverlay')?.classList.toggle('show')});</script>{% endblock %}

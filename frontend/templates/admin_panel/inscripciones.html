@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Inscripciones - Da Vinci{% endblock %}
+{% block content %}
+{% include 'components/topbar.html' with user_name=request.session.usuario_nombre user_role='Administrador' initials=request.session.usuario_iniciales %}
+{% include 'components/sidebar_admin.html' with active_tab='cursos' %}
+<main class="main-content main-content--courses">
+    <div class="d-flex flex-column flex-lg-row min-vh-100">
+        <aside class="course-subnav p-3 border-end bg-white">
+            <h5 class="fw-bold mb-3 px-2">Cursos</h5>
+            <a href="{% url 'admin_paralelos' %}" class="course-list-item"><div class="course-badge bg-orange">P</div><div class="course-info"><div class="course-name">Paralelos</div></div></a>
+            <a href="{% url 'admin_catalogo_cursos' %}" class="course-list-item"><div class="course-badge bg-purple">C</div><div class="course-info"><div class="course-name">Catálogo de cursos</div></div></a>
+            <a href="{% url 'admin_inscripciones' %}" class="course-list-item active"><div class="course-badge bg-orange">I</div><div class="course-info"><div class="course-name">Inscripciones</div></div></a>
+            <a href="{% url 'admin_catalogos' %}" class="course-list-item"><div class="course-badge bg-purple">+</div><div class="course-info"><div class="course-name">Configurar catálogos</div></div></a>
+        </aside>
+        <section class="flex-grow-1 p-3 p-lg-4">
+            {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">{{ message }}<button class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
+            <div class="mb-4"><h3 class="fw-bold mb-1">Inscribir estudiante</h3><p class="text-muted mb-0">Elige al estudiante, filtra la oferta y selecciona un paralelo con cupo.</p></div>
+            <form method="get" class="row g-4 align-items-stretch">
+                <div class="col-12 col-xl-8"><div class="table-custom p-4 h-100">
+                    <h5 class="fw-bold mb-3">Datos de inscripción</h5>
+                    <div class="mb-3"><label class="form-label fw-bold" for="estudiante">Estudiante</label><input class="form-control mb-2" type="search" id="buscarEstudiante" placeholder="Buscar por nombre o código" autocomplete="off"><select class="form-select" id="estudiante" name="id_estudiante" required><option value="">Selecciona un estudiante</option>{% for estudiante in estudiantes %}<option value="{{ estudiante.pk }}" {% if id_estudiante_seleccionado == estudiante.pk|stringformat:'s' %}selected{% endif %}>{{ estudiante.usuario.nombres }} {{ estudiante.usuario.ap_pat }} {{ estudiante.usuario.ap_mat }}{% if estudiante.codigo_estudiante %} · {{ estudiante.codigo_estudiante }}{% endif %}</option>{% endfor %}</select></div>
+                    <div class="row g-3 align-items-end"><div class="col-md-4"><label class="form-label fw-bold" for="id_idioma">Idioma</label><select class="form-select" id="id_idioma" name="id_idioma" required><option value="">Selecciona</option>{% for idioma in idiomas %}<option value="{{ idioma.id_idioma }}" {% if filtros.id_idioma == idioma.id_idioma|stringformat:'s' %}selected{% endif %}>{{ idioma.nombre }}</option>{% endfor %}</select></div><div class="col-md-4"><label class="form-label fw-bold" for="id_nivel">Nivel</label><select class="form-select" id="id_nivel" name="id_nivel" required><option value="">Selecciona</option>{% for nivel in niveles %}<option value="{{ nivel.id_nivel }}" {% if filtros.id_nivel == nivel.id_nivel|stringformat:'s' %}selected{% endif %}>{{ nivel.codigo }}</option>{% endfor %}</select></div><div class="col-md-4"><label class="form-label fw-bold" for="id_turno">Turno</label><select class="form-select" id="id_turno" name="id_turno" required><option value="">Selecciona</option>{% for turno in turnos %}<option value="{{ turno.id_turno }}" {% if filtros.id_turno == turno.id_turno|stringformat:'s' %}selected{% endif %}>{{ turno.nombre }}</option>{% endfor %}</select></div><div class="col-12 d-flex justify-content-end"><button class="btn btn-primary-custom" type="submit">Buscar paralelos</button></div></div>
+                </div></div>
+                <div class="col-12 col-xl-4"><aside class="table-custom p-4 h-100 enrollment-summary"><h5 class="fw-bold mb-3">Resumen de inscripción</h5><div class="summary-line"><span>Plan</span><strong id="planResumen">Selecciona un paralelo</strong></div><div class="summary-line"><span>Costo</span><strong>Sin definir</strong></div><div class="summary-line"><span>Descuento</span><strong>Sin definir</strong></div><div class="summary-line summary-total"><span>Total referencial</span><strong>Sin definir</strong></div><small class="text-muted d-block mt-3">El esquema actual no incluye precios ni descuentos. El pago se realiza fuera de la plataforma.</small></aside></div>
+            </form>
+            <form method="post" class="mt-4">{% csrf_token %}<input type="hidden" name="id_estudiante" value="{{ id_estudiante_seleccionado }}"><input type="hidden" name="id_idioma" value="{{ filtros.id_idioma }}"><input type="hidden" name="id_nivel" value="{{ filtros.id_nivel }}"><input type="hidden" name="id_turno" value="{{ filtros.id_turno }}">
+                <div class="table-custom p-4"><h5 class="fw-bold mb-3">Paralelos disponibles</h5>{% if disponibilidad %}<div class="enrollment-options">{% for item in disponibilidad %}<label class="enrollment-option"><input class="form-check-input" type="radio" name="id_paralelo" value="{{ item.paralelo.id_paralelo }}" data-programa="{% if item.paralelo.programa %}{{ item.paralelo.programa.nombre }}{% else %}Sin programa asignado{% endif %}{% if item.paralelo.programa.duracion_meses %} · {{ item.paralelo.programa.duracion_meses }} meses{% endif %}" {% if filtros.id_paralelo == item.paralelo.id_paralelo|stringformat:'s' %}checked{% endif %} required><span class="enrollment-option-main"><strong>{{ item.paralelo.codigo }} · {{ item.paralelo.curso.nombre }}</strong><small>{{ item.paralelo.docente.usuario.nombres }} {{ item.paralelo.docente.usuario.ap_pat }} · {{ item.paralelo.turno.nombre }}</small>{% for horario in item.paralelo.horarios.all %}<small>{{ horario.dia_semana }} · {{ horario.hora_inicio|time:'H:i' }}–{{ horario.hora_fin|time:'H:i' }}</small>{% endfor %}</span><span class="badge bg-success bg-opacity-10 text-success">{% if item.cupo_libre is None %}Cupos sin límite{% else %}{{ item.cupo_libre }} cupos libres{% endif %}</span></label>{% endfor %}</div>{% else %}<p class="text-muted mb-0">Selecciona un estudiante, idioma, nivel y turno para consultar paralelos disponibles. Los grupos llenos no aparecen.</p>{% endif %}<div class="d-flex justify-content-end mt-3"><button class="btn btn-primary-custom" type="submit" {% if not disponibilidad or not id_estudiante_seleccionado %}disabled{% endif %}>Inscribir estudiante</button></div></div>
+            </form>
+        </section>
+    </div>
+</main>
+{% endblock %}
+{% block extra_js %}<script>
+document.getElementById('hamburgerBtn')?.addEventListener('click',()=>{document.getElementById('sidebar')?.classList.toggle('show');document.getElementById('sidebarOverlay')?.classList.toggle('show')});
+const buscarEstudiante=document.getElementById('buscarEstudiante');
+const selectorEstudiante=document.getElementById('estudiante');
+buscarEstudiante?.addEventListener('input',()=>{
+    const consulta=buscarEstudiante.value.trim().toLocaleLowerCase();
+    Array.from(selectorEstudiante.options).slice(1).forEach(opcion=>{opcion.hidden=!opcion.textContent.toLocaleLowerCase().includes(consulta)});
+    if(selectorEstudiante.selectedOptions[0]?.hidden)selectorEstudiante.value='';
+});
+document.querySelectorAll('input[name="id_paralelo"]').forEach(opcion=>opcion.addEventListener('change',()=>{
+    document.getElementById('planResumen').textContent=opcion.dataset.programa;
+}));
+const paraleloSeleccionado=document.querySelector('input[name="id_paralelo"]:checked');
+if(paraleloSeleccionado)document.getElementById('planResumen').textContent=paraleloSeleccionado.dataset.programa;
+</script>{% endblock %}

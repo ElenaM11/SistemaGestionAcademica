@@ -27,7 +27,21 @@ INSTALLED_APPS = [
 
     'rol',
     'usuarios',
+
+    'rest_framework',
+    'cursos',
 ]
+
+#Agregue esto segun es importante pero aja
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

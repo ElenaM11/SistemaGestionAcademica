@@ -1,0 +1,106 @@
+.course-subnav {
+    width: var(--panel-w, 375px);
+    flex-shrink: 0;
+}
+
+.course-subnav .course-list-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 8px;
+    margin-bottom: 5px;
+    color: var(--color-text);
+    text-decoration: none;
+    border-radius: 8px;
+}
+
+.course-subnav .course-list-item:hover,
+.course-subnav .course-list-item.active {
+    background: #f5f0fa;
+}
+
+.course-subnav .course-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+@media (max-width: 991.98px) {
+    .course-subnav {
+        width: 100%;
+        border-right: 0 !important;
+        border-bottom: 1px solid #dee2e6;
+    }
+}
+
+/* Alineo las pantallas de cursos después del riel de iconos. */
+.main-content.main-content--courses {
+    margin-left: 108px !important;
+    padding-top: var(--nav-top, 71px);
+}
+
+@media (max-width: 992px) {
+    .main-content.main-content--courses {
+        margin-left: 0 !important;
+    }
+}
+
+.teacher-checks {
+    display: grid;
+    gap: .35rem;
+    color: #198754;
+    font-size: .92rem;
+}
+
+.teacher-checks[data-habilitado="false"] .teacher-check-language,
+.teacher-checks[data-sin-cruce="false"] .teacher-check-schedule {
+    color: #dc3545;
+}
+
+.enrollment-summary .summary-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .7rem 0;
+    border-bottom: 1px solid #e5e7ee;
+}
+
+.enrollment-summary .summary-total {
+    font-weight: 700;
+}
+
+.enrollment-option {
+    display: flex;
+    align-items: center;
+    gap: .9rem;
+    padding: .9rem 1rem;
+    margin-bottom: .65rem;
+    border: 1px solid #e5e7ee;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.enrollment-option:has(input:checked) {
+    border-color: var(--color-orange, #f05a28);
+    background: #fff0e8;
+}
+
+.enrollment-option-main {
+    display: grid;
+    flex: 1;
+    gap: .15rem;
+}
+
+.enrollment-option-main small {
+    color: #6b7280;
+}
+
+@media (max-width: 575.98px) {
+    .enrollment-option {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .enrollment-option .badge {
+        margin-left: 2rem;
+    }
+}
