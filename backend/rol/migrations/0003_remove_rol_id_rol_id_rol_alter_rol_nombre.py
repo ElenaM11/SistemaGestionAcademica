@@ -13,11 +13,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterField(
             model_name='rol',
-            name='id',
-            field=models.AutoField(db_column='idrol', primary_key=True, serialize=False),
-        ),
-        migrations.AlterField(
-            model_name='rol',
             name='nombre',
             field=models.CharField(db_column='nombre', max_length=50, unique=True),
         ),

@@ -3,7 +3,6 @@ from django.db import models
 
 class Rol(models.Model):
     """Defino los roles Administrador, Docente y Estudiante."""
-    id = models.AutoField(primary_key=True, db_column='idrol')
     nombre = models.CharField(max_length=50, unique=True, db_column='nombre')
 
     def __str__(self):

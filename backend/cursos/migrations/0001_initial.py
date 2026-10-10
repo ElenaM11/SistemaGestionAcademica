@@ -17,10 +17,10 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Idioma',
             fields=[
-                ('id_idioma', models.AutoField(db_column='ididioma', primary_key=True, serialize=False)),
-                ('nombre', models.CharField(db_column='nombre', max_length=100, unique=True)),
-                ('codigo', models.CharField(blank=True, db_column='codigo', max_length=10, null=True, unique=True)),
-                ('activo', models.BooleanField(db_column='activo', default=True)),
+                ('id_idioma', models.AutoField(db_column='IdIdioma', primary_key=True, serialize=False)),
+                ('nombre', models.CharField(db_column='Nombre', max_length=100, unique=True)),
+                ('codigo', models.CharField(blank=True, db_column='Codigo', max_length=10, null=True, unique=True)),
+                ('activo', models.BooleanField(db_column='Activo', default=True)),
             ],
             options={
                 'db_table': 'idioma',
@@ -29,8 +29,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Nivel',
             fields=[
-                ('id_nivel', models.AutoField(db_column='idnivel', primary_key=True, serialize=False)),
-                ('codigo', models.CharField(db_column='codigo', max_length=20, unique=True)),
+                ('id_nivel', models.AutoField(db_column='IdNivel', primary_key=True, serialize=False)),
+                ('codigo', models.CharField(db_column='Codigo', max_length=20, unique=True)),
             ],
             options={
                 'db_table': 'nivel',
@@ -39,11 +39,11 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Programa',
             fields=[
-                ('id_programa', models.AutoField(db_column='idprograma', primary_key=True, serialize=False)),
-                ('nombre', models.CharField(db_column='nombre', max_length=150)),
-                ('duracion_meses', models.IntegerField(blank=True, db_column='duracionmeses', null=True)),
-                ('descripcion', models.TextField(blank=True, db_column='descripcion', null=True)),
-                ('activo', models.BooleanField(db_column='activo', default=True)),
+                ('id_programa', models.AutoField(db_column='IdPrograma', primary_key=True, serialize=False)),
+                ('nombre', models.CharField(db_column='Nombre', max_length=150)),
+                ('duracion_meses', models.IntegerField(blank=True, db_column='DuracionMeses', null=True)),
+                ('descripcion', models.TextField(blank=True, db_column='Descripcion', null=True)),
+                ('activo', models.BooleanField(db_column='Activo', default=True)),
             ],
             options={
                 'db_table': 'programa',
@@ -52,10 +52,10 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Turno',
             fields=[
-                ('id_turno', models.AutoField(db_column='idturno', primary_key=True, serialize=False)),
-                ('nombre', models.CharField(db_column='nombre', max_length=50, unique=True)),
-                ('hora_referencia_inicio', models.TimeField(blank=True, db_column='horareferenciainicio', null=True)),
-                ('hora_referencia_fin', models.TimeField(blank=True, db_column='horareferenciafin', null=True)),
+                ('id_turno', models.AutoField(db_column='IdTurno', primary_key=True, serialize=False)),
+                ('nombre', models.CharField(db_column='Nombre', max_length=50, unique=True)),
+                ('hora_referencia_inicio', models.TimeField(blank=True, db_column='HoraReferenciaInicio', null=True)),
+                ('hora_referencia_fin', models.TimeField(blank=True, db_column='HoraReferenciaFin', null=True)),
             ],
             options={
                 'db_table': 'turno',
@@ -64,12 +64,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Curso',
             fields=[
-                ('id_curso', models.AutoField(db_column='idcurso', primary_key=True, serialize=False)),
-                ('nombre', models.CharField(db_column='nombre', max_length=150)),
-                ('descripcion', models.TextField(blank=True, db_column='descripcion', null=True)),
-                ('activo', models.BooleanField(db_column='activo', default=True)),
-                ('idioma', models.ForeignKey(db_column='ididioma', on_delete=django.db.models.deletion.PROTECT, related_name='cursos', to='cursos.idioma')),
-                ('nivel', models.ForeignKey(db_column='idnivel', on_delete=django.db.models.deletion.PROTECT, related_name='cursos', to='cursos.nivel')),
+                ('id_curso', models.AutoField(db_column='IdCurso', primary_key=True, serialize=False)),
+                ('nombre', models.CharField(db_column='Nombre', max_length=150)),
+                ('descripcion', models.TextField(blank=True, db_column='Descripcion', null=True)),
+                ('activo', models.BooleanField(db_column='Activo', default=True)),
+                ('idioma', models.ForeignKey(db_column='IdIdioma', on_delete=django.db.models.deletion.PROTECT, related_name='cursos', to='cursos.idioma')),
+                ('nivel', models.ForeignKey(db_column='IdNivel', on_delete=django.db.models.deletion.PROTECT, related_name='cursos', to='cursos.nivel')),
             ],
             options={
                 'db_table': 'curso',
@@ -78,19 +78,19 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Paralelo',
             fields=[
-                ('id_paralelo', models.AutoField(db_column='idparalelo', primary_key=True, serialize=False)),
-                ('codigo', models.CharField(db_column='codigo', max_length=50, unique=True)),
-                ('modalidad', models.CharField(blank=True, db_column='modalidad', max_length=50, null=True)),
-                ('aula', models.CharField(blank=True, db_column='aula', max_length=100, null=True)),
-                ('cupo_minimo_apertura', models.IntegerField(blank=True, db_column='cupominimoapertura', null=True)),
-                ('cupo_maximo', models.IntegerField(blank=True, db_column='cupomaximo', null=True)),
-                ('fecha_inicio', models.DateField(blank=True, db_column='fechainicio', null=True)),
-                ('fecha_fin', models.DateField(blank=True, db_column='fechafin', null=True)),
-                ('estado', models.CharField(db_column='estado', default='ACTIVO', max_length=30)),
-                ('curso', models.ForeignKey(db_column='idcurso', on_delete=django.db.models.deletion.PROTECT, related_name='paralelos', to='cursos.curso')),
-                ('docente', models.ForeignKey(db_column='iddocente', on_delete=django.db.models.deletion.PROTECT, related_name='paralelos', to='usuarios.docente')),
-                ('programa', models.ForeignKey(blank=True, db_column='idprograma', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='paralelos', to='cursos.programa')),
-                ('turno', models.ForeignKey(db_column='idturno', on_delete=django.db.models.deletion.PROTECT, related_name='paralelos', to='cursos.turno')),
+                ('id_paralelo', models.AutoField(db_column='IdParalelo', primary_key=True, serialize=False)),
+                ('codigo', models.CharField(db_column='Codigo', max_length=50, unique=True)),
+                ('modalidad', models.CharField(blank=True, db_column='Modalidad', max_length=50, null=True)),
+                ('aula', models.CharField(blank=True, db_column='Aula', max_length=100, null=True)),
+                ('cupo_minimo_apertura', models.IntegerField(blank=True, db_column='CupoMinimoApertura', null=True)),
+                ('cupo_maximo', models.IntegerField(blank=True, db_column='CupoMaximo', null=True)),
+                ('fecha_inicio', models.DateField(blank=True, db_column='FechaInicio', null=True)),
+                ('fecha_fin', models.DateField(blank=True, db_column='FechaFin', null=True)),
+                ('estado', models.CharField(db_column='Estado', default='ACTIVO', max_length=30)),
+                ('curso', models.ForeignKey(db_column='IdCurso', on_delete=django.db.models.deletion.PROTECT, related_name='paralelos', to='cursos.curso')),
+                ('docente', models.ForeignKey(db_column='IdDocente', on_delete=django.db.models.deletion.PROTECT, related_name='paralelos', to='usuarios.docente')),
+                ('programa', models.ForeignKey(blank=True, db_column='IdPrograma', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='paralelos', to='cursos.programa')),
+                ('turno', models.ForeignKey(db_column='IdTurno', on_delete=django.db.models.deletion.PROTECT, related_name='paralelos', to='cursos.turno')),
             ],
             options={
                 'db_table': 'paralelo',
@@ -99,11 +99,11 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='HorarioParalelo',
             fields=[
-                ('id_horario', models.AutoField(db_column='idhorario', primary_key=True, serialize=False)),
-                ('dia_semana', models.CharField(db_column='diasemana', max_length=20)),
-                ('hora_inicio', models.TimeField(db_column='horainicio')),
-                ('hora_fin', models.TimeField(db_column='horafin')),
-                ('paralelo', models.ForeignKey(db_column='idparalelo', on_delete=django.db.models.deletion.CASCADE, related_name='horarios', to='cursos.paralelo')),
+                ('id_horario', models.AutoField(db_column='IdHorario', primary_key=True, serialize=False)),
+                ('dia_semana', models.CharField(db_column='DiaSemana', max_length=20)),
+                ('hora_inicio', models.TimeField(db_column='HoraInicio')),
+                ('hora_fin', models.TimeField(db_column='HoraFin')),
+                ('paralelo', models.ForeignKey(db_column='IdParalelo', on_delete=django.db.models.deletion.CASCADE, related_name='horarios', to='cursos.paralelo')),
             ],
             options={
                 'db_table': 'horario_paralelo',
@@ -112,9 +112,9 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='DocenteIdioma',
             fields=[
-                ('id_docente_idioma', models.AutoField(db_column='iddocenteidioma', primary_key=True, serialize=False)),
-                ('docente', models.ForeignKey(db_column='iddocente', on_delete=django.db.models.deletion.CASCADE, related_name='idiomas_docente', to='usuarios.docente')),
-                ('idioma', models.ForeignKey(db_column='ididioma', on_delete=django.db.models.deletion.CASCADE, related_name='docentes', to='cursos.idioma')),
+                ('id_docente_idioma', models.AutoField(db_column='IdDocenteIdioma', primary_key=True, serialize=False)),
+                ('docente', models.ForeignKey(db_column='IdDocente', on_delete=django.db.models.deletion.CASCADE, related_name='idiomas_docente', to='usuarios.docente')),
+                ('idioma', models.ForeignKey(db_column='IdIdioma', on_delete=django.db.models.deletion.CASCADE, related_name='docentes', to='cursos.idioma')),
             ],
             options={
                 'db_table': 'docente_idioma',
@@ -124,11 +124,11 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='EstudianteParalelo',
             fields=[
-                ('id_estudiante_paralelo', models.AutoField(db_column='idestudianteparalelo', primary_key=True, serialize=False)),
-                ('fecha_ingreso', models.DateField(auto_now_add=True, db_column='fechaingreso')),
-                ('estado', models.CharField(db_column='estado', default='ACTIVO', max_length=30)),
-                ('estudiante', models.ForeignKey(db_column='idestudiante', on_delete=django.db.models.deletion.CASCADE, related_name='inscripciones', to='usuarios.estudiante')),
-                ('paralelo', models.ForeignKey(db_column='idparalelo', on_delete=django.db.models.deletion.CASCADE, related_name='inscripciones', to='cursos.paralelo')),
+                ('id_estudiante_paralelo', models.AutoField(db_column='IdEstudianteParalelo', primary_key=True, serialize=False)),
+                ('fecha_ingreso', models.DateField(auto_now_add=True, db_column='FechaIngreso')),
+                ('estado', models.CharField(db_column='Estado', default='ACTIVO', max_length=30)),
+                ('estudiante', models.ForeignKey(db_column='IdEstudiante', on_delete=django.db.models.deletion.CASCADE, related_name='inscripciones', to='usuarios.estudiante')),
+                ('paralelo', models.ForeignKey(db_column='IdParalelo', on_delete=django.db.models.deletion.CASCADE, related_name='inscripciones', to='cursos.paralelo')),
             ],
             options={
                 'db_table': 'estudiante_paralelo',
@@ -138,10 +138,10 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ProgramaIdioma',
             fields=[
-                ('id_programa_idioma', models.AutoField(db_column='idprogramaidioma', primary_key=True, serialize=False)),
-                ('idioma', models.ForeignKey(db_column='ididioma', on_delete=django.db.models.deletion.PROTECT, related_name='programas', to='cursos.idioma')),
-                ('nivel_maximo', models.ForeignKey(db_column='nivelmaximoid', on_delete=django.db.models.deletion.PROTECT, related_name='programas', to='cursos.nivel')),
-                ('programa', models.ForeignKey(db_column='idprograma', on_delete=django.db.models.deletion.CASCADE, related_name='idiomas', to='cursos.programa')),
+                ('id_programa_idioma', models.AutoField(db_column='IdProgramaIdioma', primary_key=True, serialize=False)),
+                ('idioma', models.ForeignKey(db_column='IdIdioma', on_delete=django.db.models.deletion.PROTECT, related_name='programas', to='cursos.idioma')),
+                ('nivel_maximo', models.ForeignKey(db_column='NivelMaximoId', on_delete=django.db.models.deletion.PROTECT, related_name='programas', to='cursos.nivel')),
+                ('programa', models.ForeignKey(db_column='IdPrograma', on_delete=django.db.models.deletion.CASCADE, related_name='idiomas', to='cursos.programa')),
             ],
             options={
                 'db_table': 'programa_idioma',

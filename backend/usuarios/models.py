@@ -5,22 +5,22 @@ from rol.models import Rol
 class Usuario(models.Model):
     id_usuario = models.AutoField(
         primary_key=True,
-        db_column='idusuario'
+        db_column='IdUsuario'
     )
 
     nombres = models.CharField(
         max_length=100,
-        db_column='nombres'
+        db_column='Nombres'
     )
 
     ap_pat = models.CharField(
         max_length=100,
-        db_column='appat'
+        db_column='ApPat'
     )
 
     ap_mat = models.CharField(
         max_length=100,
-        db_column='apmat'
+        db_column='ApMat'
     )
 
     ci = models.CharField(
@@ -28,46 +28,46 @@ class Usuario(models.Model):
         unique=True,
         null=True,
         blank=True,
-        db_column='ci'
+        db_column='Ci'
     )
 
     correo = models.EmailField(
         max_length=150,
         unique=True,
-        db_column='correo'
+        db_column='Correo'
     )
 
     password_hash = models.CharField(
         max_length=255,
-        db_column='passwordhash'
+        db_column='PasswordHash'
     )
 
     telefono = models.CharField(
         max_length=30,
         null=True,
         blank=True,
-        db_column='telefono'
+        db_column='Telefono'
     )
 
     rol = models.ForeignKey(
         Rol,
         on_delete=models.PROTECT,
-        db_column='idrol',
+        db_column='IdRol',
         related_name='usuarios'
     )
 
     estado = models.BooleanField(
         default=True,
-        db_column='estado'
+        db_column='Estado'
     )
     debe_cambiar_password = models.BooleanField(
         default=False,
-        db_column='debe_cambiar_password'
+        db_column='DebeCambiarPassword'
     )
 
     fecha_registro = models.DateTimeField(
         auto_now_add=True,
-        db_column='fecharegistro'
+        db_column='FechaRegistro'
     )
 
     def __str__(self):
@@ -84,7 +84,7 @@ class Estudiante(models.Model):
         Usuario,
         on_delete=models.CASCADE,
         primary_key=True,
-        db_column='idusuario',
+        db_column='IdUsuario',
         related_name='estudiante'
     )
 
@@ -93,27 +93,27 @@ class Estudiante(models.Model):
         unique=True,
         null=True,
         blank=True,
-        db_column='codigoestudiante'
+        db_column='CodigoEstudiante'
     )
 
     fecha_nacimiento = models.DateField(
         null=True,
         blank=True,
-        db_column='fechanacimiento'
+        db_column='FechaNacimiento'
     )
 
     contacto_emergencia = models.CharField(
         max_length=150,
         null=True,
         blank=True,
-        db_column='contactoemergencia'
+        db_column='ContactoEmergencia'
     )
 
     telefono_emergencia = models.CharField(
         max_length=30,
         null=True,
         blank=True,
-        db_column='telefonoemergencia'
+        db_column='TelefonoEmergencia'
     )
 
     def __str__(self):
@@ -130,7 +130,7 @@ class Docente(models.Model):
         Usuario,
         on_delete=models.CASCADE,
         primary_key=True,
-        db_column='idusuario',
+        db_column='IdUsuario',
         related_name='docente'
     )
 
@@ -138,7 +138,7 @@ class Docente(models.Model):
         max_length=150,
         null=True,
         blank=True,
-        db_column='especialidad'
+        db_column='Especialidad'
     )
 
     def __str__(self):
