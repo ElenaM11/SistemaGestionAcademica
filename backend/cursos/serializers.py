@@ -85,6 +85,31 @@ class ParaleloEntradaSerializer(serializers.Serializer):
         return datos
 
 
+class ParaleloActualizarSerializer(serializers.Serializer):
+    """Valido los campos editables de un paralelo existente."""
+    id_curso = serializers.IntegerField(required=False)
+    id_programa = serializers.IntegerField(required=False, allow_null=True)
+    id_turno = serializers.IntegerField(required=False)
+    id_docente = serializers.IntegerField(required=False)
+    modalidad = serializers.CharField(max_length=50, required=False, allow_blank=True, allow_null=True)
+    aula = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
+    cupo_minimo_apertura = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    cupo_maximo = serializers.IntegerField(required=False, allow_null=True, min_value=1)
+    fecha_inicio = serializers.DateField(required=False, allow_null=True)
+    fecha_fin = serializers.DateField(required=False, allow_null=True)
+    estado = serializers.ChoiceField(required=False, choices=('ACTIVO', 'INACTIVO'))
+
+    def validate(self, datos):
+        """Compruebo que cupos y fechas modificados sean coherentes."""
+        minimo, maximo = datos.get('cupo_minimo_apertura'), datos.get('cupo_maximo')
+        if minimo is not None and maximo is not None and minimo > maximo:
+            raise serializers.ValidationError('El cupo mínimo no puede superar el cupo máximo.')
+        inicio, fin = datos.get('fecha_inicio'), datos.get('fecha_fin')
+        if inicio and fin and inicio > fin:
+            raise serializers.ValidationError('La fecha de inicio debe ser anterior a la fecha de fin.')
+        return datos
+
+
 class InscripcionEntradaSerializer(serializers.Serializer):
     """Valido una inscripción sin aceptar identificadores del estudiante."""
     id_estudiante = serializers.IntegerField()

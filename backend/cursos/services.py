@@ -157,6 +157,67 @@ def crear_paralelo(datos):
 
 
 @transaction.atomic
+def actualizar_paralelo(paralelo_id, datos):
+    """Actualizo un paralelo validando idioma, cruces de horario y cupos ocupados."""
+    paralelo = get_object_or_404(
+        Paralelo.objects.select_for_update().select_related('curso__idioma'), pk=paralelo_id,
+    )
+    if datos == {'estado': 'INACTIVO'}:
+        paralelo.estado = 'INACTIVO'
+        paralelo.save(update_fields=['estado'])
+        return paralelo
+    curso_id = datos.get('id_curso', paralelo.curso_id)
+    curso = get_object_or_404(Curso.objects.select_related('idioma'), pk=curso_id)
+    if not curso.activo and curso.pk != paralelo.curso_id:
+        raise ValidationError('No se puede asignar un curso inactivo a un paralelo.')
+    docente = get_object_or_404(
+        Docente.objects.select_for_update().select_related('usuario'),
+        pk=datos.get('id_docente', paralelo.docente_id),
+    )
+    turno = get_object_or_404(Turno, pk=datos.get('id_turno', paralelo.turno_id))
+    programa_id = datos.get('id_programa', paralelo.programa_id)
+    programa = get_object_or_404(Programa, pk=programa_id) if programa_id else None
+    if programa and not programa.activo and programa.pk != paralelo.programa_id:
+        raise ValidationError('No se puede asignar un programa inactivo a un paralelo.')
+    cambio_docente = docente.pk != paralelo.docente_id
+    cambio_idioma = curso.idioma_id != paralelo.curso.idioma_id
+    reactivacion = datos.get('estado') == 'ACTIVO' and paralelo.estado != 'ACTIVO'
+    if reactivacion and not curso.activo:
+        raise ValidationError('No se puede activar un paralelo cuyo curso está inactivo.')
+    if reactivacion and programa and not programa.activo:
+        raise ValidationError('No se puede activar un paralelo cuyo programa está inactivo.')
+    if cambio_docente or cambio_idioma or reactivacion:
+        _validar_idioma_docente(docente, curso)
+
+    horarios = list(paralelo.horarios.values('dia_semana', 'hora_inicio', 'hora_fin'))
+    if (cambio_docente or cambio_idioma or reactivacion) and _hay_cruce_horario(docente, horarios, paralelo.pk):
+        raise ValidationError('El docente ya tiene un curso asignado en ese horario.')
+
+    minimo = datos.get('cupo_minimo_apertura', paralelo.cupo_minimo_apertura)
+    maximo = datos.get('cupo_maximo', paralelo.cupo_maximo)
+    if minimo is not None and maximo is not None and minimo > maximo:
+        raise ValidationError('El cupo mínimo no puede superar el cupo máximo.')
+    inscritos = EstudianteParalelo.objects.select_for_update().filter(
+        paralelo=paralelo, estado='ACTIVO',
+    ).count()
+    if maximo is not None and maximo < inscritos:
+        raise ValidationError('El cupo máximo no puede ser menor que los estudiantes inscritos actualmente.')
+
+    paralelo.curso = curso
+    paralelo.programa = programa
+    paralelo.turno = turno
+    paralelo.docente = docente
+    for campo in (
+        'modalidad', 'aula', 'cupo_minimo_apertura', 'cupo_maximo',
+        'fecha_inicio', 'fecha_fin', 'estado',
+    ):
+        if campo in datos:
+            setattr(paralelo, campo, datos[campo])
+    paralelo.save()
+    return paralelo
+
+
+@transaction.atomic
 def asignar_docente(paralelo_id, docente_id, cambios=None):
     """Asigno o reasigno un docente si cumple idioma y disponibilidad horaria."""
     paralelo = get_object_or_404(Paralelo.objects.select_for_update().select_related('curso__idioma'), pk=paralelo_id)

@@ -10,9 +10,9 @@ from rest_framework.exceptions import ValidationError
 from usuarios.models import Docente, Estudiante, Usuario
 
 from .models import Curso, DocenteIdioma, EstudianteParalelo, Idioma, Nivel, Paralelo, Programa, Turno
-from .serializers import CursoSerializer, ParaleloEntradaSerializer
+from .serializers import CursoSerializer, ParaleloActualizarSerializer, ParaleloEntradaSerializer
 from .services import (
-    asignar_docente, crear_elemento_catalogo, crear_o_actualizar_curso,
+    asignar_docente, actualizar_paralelo, crear_elemento_catalogo, crear_o_actualizar_curso,
     crear_paralelo, docente_disponible_para_horarios, inscribir_estudiante, listar_paralelos_disponibles,
     habilitar_idioma_docente,
 )
@@ -163,6 +163,11 @@ def paralelos_pagina(request):
     usuario, respuesta = validar_rol_pagina(request, 'Administrador')
     if respuesta:
         return respuesta
+    editar_id = request.POST.get('id_paralelo') if request.method == 'POST' else request.GET.get('editar')
+    paralelo_editar = get_object_or_404(
+        Paralelo.objects.select_related('curso', 'programa', 'turno', 'docente__usuario').prefetch_related('horarios'),
+        pk=editar_id,
+    ) if editar_id else None
     horarios_form = [{
         'dia_semana': dia, 'hora_inicio': hora_inicio, 'hora_fin': hora_fin,
     } for dia, hora_inicio, hora_fin in zip(
@@ -171,8 +176,17 @@ def paralelos_pagina(request):
         request.POST.getlist('hora_fin'),
     )] if request.method == 'POST' else [{}]
     if request.method == 'POST':
+        if request.POST.get('accion') == 'cambiar_estado':
+            try:
+                estado = request.POST.get('estado')
+                if estado not in ('ACTIVO', 'INACTIVO'):
+                    raise ValidationError('Selecciona un estado válido para el paralelo.')
+                actualizar_paralelo(request.POST.get('id_paralelo'), {'estado': estado})
+                messages.success(request, 'El paralelo se activó correctamente.' if estado == 'ACTIVO' else 'El paralelo se desactivó correctamente.')
+                return redirect('admin_paralelos')
+            except (ValidationError, IntegrityError) as error:
+                registrar_error_pagina(request, error)
         datos = {
-            'codigo': request.POST.get('codigo', '').strip(),
             'id_curso': request.POST.get('id_curso'),
             'id_programa': request.POST.get('id_programa') or None,
             'id_turno': request.POST.get('id_turno'),
@@ -183,13 +197,19 @@ def paralelos_pagina(request):
             'cupo_maximo': request.POST.get('cupo_maximo') or None,
             'fecha_inicio': request.POST.get('fecha_inicio') or None,
             'fecha_fin': request.POST.get('fecha_fin') or None,
-            'horarios': horarios_form,
         }
-        serializer = ParaleloEntradaSerializer(data=datos)
+        serializer_class = ParaleloActualizarSerializer if paralelo_editar else ParaleloEntradaSerializer
+        if not paralelo_editar:
+            datos['horarios'] = horarios_form
+        serializer = serializer_class(data=datos)
         if serializer.is_valid():
             try:
-                crear_paralelo(serializer.validated_data)
-                messages.success(request, 'El paralelo se creó correctamente.')
+                if paralelo_editar:
+                    actualizar_paralelo(paralelo_editar.pk, serializer.validated_data)
+                    messages.success(request, 'El paralelo se actualizó correctamente.')
+                else:
+                    crear_paralelo(serializer.validated_data)
+                    messages.success(request, 'El paralelo se creó correctamente.')
                 return redirect('admin_paralelos')
             except (ValidationError, IntegrityError) as error:
                 registrar_error_pagina(request, error)
@@ -202,14 +222,21 @@ def paralelos_pagina(request):
         ).prefetch_related('horarios').annotate(
             inscritos_activos=Count('inscripciones', filter=Q(inscripciones__estado='ACTIVO'))
         ).order_by('codigo'),
-        'cursos': Curso.objects.filter(activo=True).select_related('idioma', 'nivel').order_by('nombre'),
-        'programas': Programa.objects.filter(activo=True).order_by('nombre'),
+        'cursos': Curso.objects.filter(
+            Q(activo=True) | Q(pk=paralelo_editar.curso_id if paralelo_editar else None)
+        ).select_related('idioma', 'nivel').order_by('nombre'),
+        'programas': Programa.objects.filter(
+            Q(activo=True) | Q(pk=paralelo_editar.programa_id if paralelo_editar else None)
+        ).order_by('nombre'),
         'turnos': Turno.objects.order_by('nombre'),
-        'docentes': Docente.objects.select_related('usuario').filter(usuario__estado=True).order_by(
+        'docentes': Docente.objects.select_related('usuario').filter(
+            Q(usuario__estado=True) | Q(pk=paralelo_editar.docente_id if paralelo_editar else None)
+        ).order_by(
             'usuario__ap_pat', 'usuario__nombres'
         ),
         'form_data': request.POST if request.method == 'POST' else {},
-        'mostrar_modal': request.method == 'POST',
+        'paralelo_editar': paralelo_editar,
+        'mostrar_modal': request.method == 'POST' or bool(request.GET.get('editar')),
         'horarios_form': horarios_form,
         'gestion_actual': timezone.localdate().year,
     })

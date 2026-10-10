@@ -24,6 +24,55 @@
     font-weight: 600;
 }
 
+a.teacher-course-card:link,
+a.teacher-course-card:visited {
+    min-height: 112px;
+    padding: 1.25rem 1.75rem;
+    color: #fff !important;
+    text-decoration: none !important;
+    background: #7040a2;
+    border-radius: 12px;
+    transition: background-color .15s ease, transform .15s ease;
+}
+
+a.teacher-course-card:hover,
+a.teacher-course-card:focus {
+    color: #fff !important;
+    text-decoration: none !important;
+    background: #60358e;
+    transform: translateY(-1px);
+}
+
+.teacher-course-card h3,
+.teacher-course-card p,
+.teacher-course-details {
+    color: #fff;
+}
+
+.teacher-course-card:focus-visible {
+    outline: 3px solid #f28a35;
+    outline-offset: 3px;
+}
+
+.teacher-course-details {
+    overflow-wrap: anywhere;
+    font-size: .92rem;
+}
+
+.teacher-course-count {
+    flex: 0 0 auto;
+    padding: .45rem .8rem;
+    color: #62409b;
+    background: #fff;
+}
+
+@media (max-width: 575.98px) {
+    .teacher-course-card {
+        align-items: flex-start !important;
+        padding: 1.1rem;
+    }
+}
+
 @media (max-width: 991.98px) {
     .course-subnav {
         width: 100%;
