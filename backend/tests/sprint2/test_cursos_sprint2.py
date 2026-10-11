@@ -298,3 +298,63 @@ class PruebasSprintDos(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertContains(respuesta, f'Editar paralelo {paralelo.codigo}')
         self.assertContains(respuesta, 'name="cupo_maximo"')
+
+    def test_admin_consulta_estudiantes_del_paralelo_en_inscripciones(self):
+        """Muestro los paralelos activos y sus estudiantes inscritos al administrador."""
+        paralelo = self._crear_paralelo('ING-A1-M1')
+        EstudianteParalelo.objects.create(estudiante=self.estudiante, paralelo=paralelo)
+        self._sesion(self.admin)
+
+        respuesta = self.client.get(f'/admin/cursos/inscripciones/?vista=cursos&id_paralelo={paralelo.pk}')
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, 'Cursos activos')
+        self.assertContains(respuesta, 'teacher-course-card')
+        self.assertContains(respuesta, 'Cursos y estudiantes')
+        self.assertContains(respuesta, 'Estudiantes de ING-A1-M1')
+        self.assertContains(respuesta, self.estudiante_usuario.correo)
+        self.assertNotContains(respuesta, 'Gestión de inscripciones')
+        self.assertNotContains(respuesta, 'nav-pills')
+        self.assertNotContains(respuesta, 'Datos de inscripciÃ³n')
+
+    def test_admin_retira_inscripcion_sin_borrar_registro(self):
+        """Retiro al estudiante desde la pantalla y conservo la inscripción histórica."""
+        paralelo = self._crear_paralelo('ING-A1-M1')
+        inscripcion = EstudianteParalelo.objects.create(estudiante=self.estudiante, paralelo=paralelo)
+        self._sesion(self.admin)
+
+        respuesta = self.client.post('/admin/cursos/inscripciones/', {
+            'accion': 'retirar',
+            'id_inscripcion': inscripcion.pk,
+            'id_paralelo': paralelo.pk,
+        })
+
+        self.assertEqual(respuesta.status_code, 302)
+        inscripcion.refresh_from_db()
+        self.assertEqual(inscripcion.estado, 'RETIRADO')
+        self.assertTrue(EstudianteParalelo.objects.filter(pk=inscripcion.pk).exists())
+
+    def test_admin_api_retira_inscripcion_con_delete_logico(self):
+        """Permito retirar por API y respondo sin eliminar físicamente la inscripción."""
+        paralelo = self._crear_paralelo('ING-A1-M1')
+        inscripcion = EstudianteParalelo.objects.create(estudiante=self.estudiante, paralelo=paralelo)
+        self._sesion(self.admin)
+
+        respuesta = self.client.delete(f'/api/admin/cursos/inscripciones/{inscripcion.pk}/')
+
+        self.assertEqual(respuesta.status_code, 204)
+        inscripcion.refresh_from_db()
+        self.assertEqual(inscripcion.estado, 'RETIRADO')
+        self.assertTrue(EstudianteParalelo.objects.filter(pk=inscripcion.pk).exists())
+
+    def test_estudiante_no_puede_retirar_inscripcion_por_api(self):
+        """Deniego a un estudiante la retirada administrativa de una inscripción."""
+        paralelo = self._crear_paralelo('ING-A1-M1')
+        inscripcion = EstudianteParalelo.objects.create(estudiante=self.estudiante, paralelo=paralelo)
+        self._sesion(self.estudiante_usuario)
+
+        respuesta = self.client.delete(f'/api/admin/cursos/inscripciones/{inscripcion.pk}/')
+
+        self.assertEqual(respuesta.status_code, 403)
+        inscripcion.refresh_from_db()
+        self.assertEqual(inscripcion.estado, 'ACTIVO')

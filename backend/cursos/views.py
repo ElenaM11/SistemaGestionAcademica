@@ -12,12 +12,12 @@ from .permissions import PermisoAdministrador, PermisoDocente, PermisoEstudiante
 from .serializers import (
     CursoSerializer, EstudianteParaleloSerializer, IdiomaSerializer,
     DocenteIdiomaSerializer, DocenteIdiomaEntradaSerializer,
-    InscripcionEntradaSerializer, NivelSerializer, ParaleloEntradaSerializer,
+    InscripcionEntradaSerializer, NivelSerializer, ParaleloActualizarSerializer, ParaleloEntradaSerializer,
     ProgramaSerializer, TurnoSerializer,
 )
 from .services import (
-    asignar_docente as services_asignar_docente, cambiar_asignacion, crear_o_actualizar_curso,
-    crear_paralelo, estudiantes_de_paralelo, inscribir_estudiante,
+    asignar_docente as services_asignar_docente, actualizar_paralelo, cambiar_asignacion, crear_o_actualizar_curso,
+    crear_paralelo, estudiantes_de_paralelo, inscribir_estudiante, retirar_inscripcion,
     habilitar_idioma_docente, listar_paralelos_disponibles,
 )
 
@@ -136,6 +136,23 @@ def paralelos(request):
     return Response({'id_paralelo': paralelo.pk, 'codigo': paralelo.codigo}, status=status.HTTP_201_CREATED)
 
 
+@api_view(['PATCH'])
+@permission_classes([PermisoAdministrador])
+def paralelo_detalle(request, paralelo_id):
+    """Actualizo datos de un paralelo o lo desactivo sin eliminar sus registros."""
+    serializer = ParaleloActualizarSerializer(data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    paralelo = actualizar_paralelo(paralelo_id, serializer.validated_data)
+    return Response({
+        'id_paralelo': paralelo.pk,
+        'codigo': paralelo.codigo,
+        'id_curso': paralelo.curso_id,
+        'id_docente': paralelo.docente_id,
+        'cupo_maximo': paralelo.cupo_maximo,
+        'estado': paralelo.estado,
+    })
+
+
 @api_view(['POST'])
 @permission_classes([PermisoAdministrador])
 def asignar_docente(request, paralelo_id=None):
@@ -148,7 +165,7 @@ def asignar_docente(request, paralelo_id=None):
     return Response({'id_paralelo': paralelo.pk, 'id_docente': paralelo.docente_id, 'estado': paralelo.estado})
 
 
-@api_view(['GET', 'POST', 'PATCH'])
+@api_view(['GET', 'POST', 'PATCH', 'DELETE'])
 @permission_classes([PermisoAdministrador])
 def inscripciones(request, inscripcion_id=None):
     """Consulto, creo o cambio de paralelo una inscripciÃ³n."""
@@ -182,6 +199,12 @@ def inscripciones(request, inscripcion_id=None):
             paralelo_id=serializer.validated_data['id_paralelo'],
         )
         return Response(EstudianteParaleloSerializer(inscripcion).data, status=status.HTTP_201_CREATED)
+
+    if request.method == 'DELETE':
+        if inscripcion_id is None:
+            return Response({'error': 'Debes indicar la inscripción que deseas retirar.'}, status=status.HTTP_400_BAD_REQUEST)
+        retirar_inscripcion(inscripcion_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     if inscripcion_id is None or not request.data.get('id_paralelo'):
         return Response({'error': 'Debes indicar la inscripciÃ³n y el paralelo destino.'}, status=status.HTTP_400_BAD_REQUEST)

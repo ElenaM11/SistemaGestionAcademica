@@ -271,6 +271,20 @@ def inscribir_estudiante(estudiante_id, paralelo_id):
 
 
 @transaction.atomic
+def retirar_inscripcion(inscripcion_id):
+    """Retiro una inscripción activa y conservo su registro académico."""
+    inscripcion = get_object_or_404(
+        EstudianteParalelo.objects.select_for_update(),
+        pk=inscripcion_id,
+    )
+    if inscripcion.estado != 'ACTIVO':
+        raise ValidationError('La inscripción ya está retirada.')
+    inscripcion.estado = 'RETIRADO'
+    inscripcion.save(update_fields=['estado'])
+    return inscripcion
+
+
+@transaction.atomic
 def cambiar_asignacion(estudiante_paralelo_id, paralelo_id):
     """Muevo una inscripción activa tras verificar el cupo del paralelo destino."""
     inscripcion = get_object_or_404(EstudianteParalelo.objects.select_for_update(), pk=estudiante_paralelo_id)

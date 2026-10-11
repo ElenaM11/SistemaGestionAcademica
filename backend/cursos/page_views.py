@@ -14,7 +14,7 @@ from .serializers import CursoSerializer, ParaleloActualizarSerializer, Paralelo
 from .services import (
     asignar_docente, actualizar_paralelo, crear_elemento_catalogo, crear_o_actualizar_curso,
     crear_paralelo, docente_disponible_para_horarios, inscribir_estudiante, listar_paralelos_disponibles,
-    habilitar_idioma_docente,
+    habilitar_idioma_docente, retirar_inscripcion,
 )
 
 
@@ -304,14 +304,23 @@ def inscripciones_pagina(request):
     if respuesta:
         return respuesta
     if request.method == 'POST':
-        try:
-            inscribir_estudiante(
-                request.POST.get('id_estudiante'), request.POST.get('id_paralelo')
-            )
-            messages.success(request, 'La inscripción se registró correctamente.')
-            return redirect('admin_inscripciones')
-        except (ValidationError, IntegrityError) as error:
-            registrar_error_pagina(request, error)
+        if request.POST.get('accion') == 'retirar':
+            paralelo_id = request.POST.get('id_paralelo')
+            try:
+                retirar_inscripcion(request.POST.get('id_inscripcion'))
+                messages.success(request, 'La inscripción se retiró correctamente; el registro se conservó en el historial.')
+                return redirect(f'{request.path}?vista=cursos&id_paralelo={paralelo_id}')
+            except (ValidationError, IntegrityError) as error:
+                registrar_error_pagina(request, error)
+        else:
+            try:
+                inscribir_estudiante(
+                    request.POST.get('id_estudiante'), request.POST.get('id_paralelo')
+                )
+                messages.success(request, 'La inscripción se registró correctamente.')
+                return redirect(f'{request.path}?vista=inscribir')
+            except (ValidationError, IntegrityError) as error:
+                registrar_error_pagina(request, error)
     disponibilidad = []
     parametros = request.POST if request.method == 'POST' else request.GET
     filtros = ('id_idioma', 'id_nivel', 'id_turno')
@@ -320,6 +329,22 @@ def inscripciones_pagina(request):
             disponibilidad = listar_paralelos_disponibles(*(parametros[campo] for campo in filtros))
         except (TypeError, ValueError):
             messages.error(request, 'Selecciona un idioma, nivel y turno válidos.')
+    paralelos_gestion = Paralelo.objects.filter(
+        estado='ACTIVO', curso__activo=True,
+    ).select_related('curso__idioma', 'curso__nivel', 'turno', 'docente__usuario').annotate(
+        inscritos_activos=Count('inscripciones', filter=Q(inscripciones__estado='ACTIVO'))
+    ).prefetch_related('horarios').order_by('curso__idioma__nombre', 'curso__nivel__codigo', 'codigo')
+    paralelo_seleccionado = None
+    inscripciones_paralelo = EstudianteParalelo.objects.none()
+    if parametros.get('id_paralelo'):
+        paralelo_seleccionado = get_object_or_404(
+            paralelos_gestion, pk=parametros['id_paralelo'],
+        )
+        inscripciones_paralelo = EstudianteParalelo.objects.filter(
+            paralelo=paralelo_seleccionado, estado='ACTIVO',
+        ).select_related('estudiante__usuario').order_by(
+            'estudiante__usuario__ap_pat', 'estudiante__usuario__ap_mat', 'estudiante__usuario__nombres'
+        )
     return render(request, 'admin_panel/inscripciones.html', {
         'usuario': usuario,
         'estudiantes': Estudiante.objects.select_related('usuario').filter(usuario__estado=True).order_by(
@@ -331,6 +356,10 @@ def inscripciones_pagina(request):
         'disponibilidad': disponibilidad,
         'filtros': parametros,
         'id_estudiante_seleccionado': parametros.get('id_estudiante', ''),
+        'paralelos_gestion': paralelos_gestion,
+        'paralelo_seleccionado': paralelo_seleccionado,
+        'inscripciones_paralelo': inscripciones_paralelo,
+        'vista': parametros.get('vista', 'inscribir'),
     })
 
 

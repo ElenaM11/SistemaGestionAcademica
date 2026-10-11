@@ -43,6 +43,10 @@ a.teacher-course-card:focus {
     transform: translateY(-1px);
 }
 
+a.teacher-course-card.is-selected {
+    box-shadow: 0 0 0 3px #f28a35;
+}
+
 .teacher-course-card h3,
 .teacher-course-card p,
 .teacher-course-details {
