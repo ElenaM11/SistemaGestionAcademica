@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -120,4 +121,17 @@ if os.getenv('LOG_SQL', 'False') == 'True':
         'version': 1,
         'handlers': {'console': {'class': 'logging.StreamHandler'}},
         'loggers': {'django.db.backends': {'handlers': ['console'], 'level': 'DEBUG'}},
+    }
+
+
+# CONFIGURACIÓN PARA PRUEBAS
+# Usa SQLite en memoria cuando se ejecutan tests (local o CI)
+import sys
+
+if 'pytest' in sys.modules or 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
     }
