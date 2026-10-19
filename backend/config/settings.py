@@ -30,6 +30,10 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'cursos',
+    'actividades',
+    'asistencia',
+    'materiales',
+    'notificaciones',
 ]
 
 #Agregue esto segun es importante pero aja
