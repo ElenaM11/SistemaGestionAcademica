@@ -1,0 +1,85 @@
+{% extends 'docente/curso_base.html' %}
+{# Pantalla 06: entregas y calificacion.
+   Contexto: actividad (titulo, puntaje_maximo), entregas, total_entregadas, total_sin_entregar, seleccionada.
+   Cada item de entregas: estudiante (pk, usuario.nombres, usuario.ap_pat), fecha_entrega, estado, nota.
+   estado: 'entregada' | 'tardia' | 'calificada' | 'sin_entregar'.
+   seleccionada: estudiante, estado, contenido, nota, observaciones (puede ser None). #}
+{% block title %}Entregas - {{ actividad.titulo }} - Da Vinci{% endblock %}
+{% block docente_nav %}{% include 'components/docente_nav.html' with active_rail='tareas' nav_url_name='docente_actividades' %}{% endblock %}
+{% block subtitulo %}{{ actividad.titulo }} · entregas y calificación{% endblock %}
+{% block tabs %}{% include 'components/curso_tabs.html' with tab_activa='tareas' %}{% endblock %}
+
+{% block curso_contenido %}
+<div class="course-grid">
+    <section class="panel-card">
+        <div class="pill-row">
+            <span class="pill pill--ok pill--lg">{{ total_entregadas }} entregadas</span>
+            <span class="pill pill--missing pill--lg">{{ total_sin_entregar }} sin entregar</span>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Estudiante</th>
+                        <th scope="col">Entrega</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Nota</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in entregas %}
+                    <tr {% if seleccionada and e.estudiante.pk == seleccionada.estudiante.pk %}class="is-selected"{% endif %}>
+                        <td>
+                            <a class="row-link" href="?estudiante={{ e.estudiante.pk }}">{{ e.estudiante.usuario.nombres }} {{ e.estudiante.usuario.ap_pat }}</a>
+                        </td>
+                        <td>{{ e.fecha_entrega|date:'d b'|default:'—' }}</td>
+                        <td>
+                            {% if e.estado == 'calificada' %}<span class="pill pill--graded">Calificada</span>
+                            {% elif e.estado == 'tardia' %}<span class="pill pill--late">Tardía</span>
+                            {% elif e.estado == 'entregada' %}<span class="pill pill--ok">Entregada</span>
+                            {% else %}<span class="pill pill--missing">Sin entregar</span>{% endif %}
+                        </td>
+                        <td>{{ e.nota|default_if_none:'—' }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center text-empty py-4">No hay estudiantes inscritos en este curso.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel-card">
+        {% if seleccionada %}
+        <h5 class="panel-title">Calificar: {{ seleccionada.estudiante.usuario.nombres }} {{ seleccionada.estudiante.usuario.ap_pat }}</h5>
+        <form method="post" action="{% url 'docente_entregas' curso.id_curso actividad.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="estudiante" value="{{ seleccionada.estudiante.pk }}">
+            <div class="mb-3">
+                <span class="form-label d-block" id="respuestaEtiqueta">Respuesta del estudiante</span>
+                <div class="response-box" role="textbox" aria-readonly="true" aria-labelledby="respuestaEtiqueta">{{ seleccionada.contenido|default:'Este estudiante aún no envió su respuesta.' }}</div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="nota">Calificación (sobre {{ actividad.puntaje_maximo }})</label>
+                <input class="form-control" type="number" id="nota" name="nota" min="0" max="{{ actividad.puntaje_maximo }}" step="0.5"
+                       value="{{ seleccionada.nota|default_if_none:'' }}" {% if seleccionada.estado == 'sin_entregar' %}disabled{% endif %}>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="observaciones">Observaciones</label>
+                <textarea class="form-control" id="observaciones" name="observaciones" rows="2"
+                          {% if seleccionada.estado == 'sin_entregar' %}disabled{% endif %}>{{ seleccionada.observaciones|default:'' }}</textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary-custom btn-pill-lg" type="submit" {% if seleccionada.estado == 'sin_entregar' %}disabled{% endif %}>Guardar calificación</button>
+            </div>
+        </form>
+        {% else %}
+        <h5 class="panel-title">Calificar</h5>
+        <div class="empty-state">
+            <i class="bi bi-person-check"></i>
+            Elige un estudiante de la lista para ver su entrega y calificarla.
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

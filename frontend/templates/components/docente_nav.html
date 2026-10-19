@@ -1,0 +1,55 @@
+{# Riel de iconos + subpanel "Mis cursos" del docente.
+   Parametros (todos opcionales):
+     active_rail   -> 'actividad' | 'chat' | 'equipos' | 'tareas' | 'llamadas'
+     nav_url_name  -> nombre de la url a la que apunta cada curso del subpanel
+                      (recibe curso_id). Por defecto: docente_estudiantes_curso.
+   Contexto: paralelos (cada item con curso_id, curso.idioma, curso.nivel, turno), curso. #}
+<div class="app-nav" id="sidebar">
+    <ul class="rail">
+        <li>
+            <a class="rail-link {% if active_rail == 'actividad' %}active{% endif %}" href="#">
+                <i class="bi bi-bell"></i><span>Actividad</span>
+            </a>
+        </li>
+        <li>
+            <a class="rail-link {% if active_rail == 'chat' %}active{% endif %}" href="#">
+                <i class="bi bi-chat-square"></i><span>Chat</span>
+            </a>
+        </li>
+        <li>
+            <a class="rail-link {% if active_rail == 'equipos' %}active{% endif %}" href="#">
+                <i class="bi bi-people"></i><span>Equipos</span>
+            </a>
+        </li>
+        <li>
+            <a class="rail-link {% if active_rail == 'tareas' %}active{% endif %}" href="{% url 'docente_actividades' curso.id_curso %}">
+                <i class="bi bi-check2-square"></i><span>Tareas</span>
+            </a>
+        </li>
+        <li>
+            <a class="rail-link {% if active_rail == 'llamadas' %}active{% endif %}" href="#">
+                <i class="bi bi-telephone"></i><span>Llamadas</span>
+            </a>
+        </li>
+    </ul>
+
+    <aside class="subpanel" aria-label="Mis cursos">
+        <h4>Mis cursos</h4>
+        {% with destino=nav_url_name|default:'docente_estudiantes_curso' %}
+        {% for grupo in paralelos %}
+            {% if grupo.curso_id == curso.id_curso %}
+            <a class="sub-item active" href="{% url destino grupo.curso_id %}" aria-current="page">
+                <span class="chip c-orange">{{ grupo.curso.nivel.codigo }}</span>
+                {{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}
+            </a>
+            {% else %}
+            <a class="sub-item" href="{% url destino grupo.curso_id %}">
+                <span class="chip {% cycle 'c-dark' 'c-gray' %}">{{ grupo.curso.nivel.codigo }}</span>
+                {{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}
+            </a>
+            {% endif %}
+        {% endfor %}
+        {% endwith %}
+    </aside>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>

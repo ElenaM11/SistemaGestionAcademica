@@ -1,0 +1,63 @@
+{% extends 'docente/curso_base.html' %}
+{# Pantalla 08: registrar asistencia.
+   Contexto: sesion (fecha, hora_inicio, hora_fin), inscripciones.
+   Cada inscripcion: pk, estudiante.usuario (nombres, ap_pat, ap_mat), estado_actual (opcional), observacion (opcional).
+   Se envia como estado_<pk> (presente | ausente | tardanza) y obs_<pk>. #}
+{% block title %}Asistencia - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
+{% block docente_nav %}{% include 'components/docente_nav.html' with nav_url_name='docente_asistencia' %}{% endblock %}
+{% block subtitulo %}Sesión del {{ sesion.fecha|date:'l j \d\e F' }} · {{ sesion.hora_inicio|time:'H:i' }} a {{ sesion.hora_fin|time:'H:i' }}{% endblock %}
+{% block tabs %}{% include 'components/curso_tabs.html' with tab_activa='asistencia' %}{% endblock %}
+
+{% block curso_contenido %}
+<div class="course-grid course-grid--full">
+    <section class="panel-card">
+        <form method="post" action="{% url 'docente_asistencia' curso.id_curso %}">
+            {% csrf_token %}
+            <input type="hidden" name="fecha" value="{{ sesion.fecha|date:'Y-m-d' }}">
+            <div class="card-head">
+                <span class="count">{{ inscripciones|length }} estudiantes</span>
+                <a href="{% url 'docente_asistencia_historial' curso.id_curso %}">Modificar un registro anterior</a>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Estudiante</th>
+                            <th scope="col">Estado</th>
+                            <th scope="col">Observación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in inscripciones %}
+                        {% with estado=i.estado_actual|default:'presente' %}
+                        <tr>
+                            <td>{{ i.estudiante.usuario.nombres }} {{ i.estudiante.usuario.ap_pat }}</td>
+                            <td>
+                                <div class="att-group" role="radiogroup" aria-label="Asistencia de {{ i.estudiante.usuario.nombres }} {{ i.estudiante.usuario.ap_pat }}">
+                                    <input class="att-input" type="radio" name="estado_{{ i.pk }}" id="p{{ i.pk }}" value="presente" {% if estado == 'presente' %}checked{% endif %}>
+                                    <label class="att-pill att-pill--ok" for="p{{ i.pk }}">Presente</label>
+                                    <input class="att-input" type="radio" name="estado_{{ i.pk }}" id="a{{ i.pk }}" value="ausente" {% if estado == 'ausente' %}checked{% endif %}>
+                                    <label class="att-pill att-pill--missing" for="a{{ i.pk }}">Ausente</label>
+                                    <input class="att-input" type="radio" name="estado_{{ i.pk }}" id="t{{ i.pk }}" value="tardanza" {% if estado == 'tardanza' %}checked{% endif %}>
+                                    <label class="att-pill att-pill--late" for="t{{ i.pk }}">Tardanza</label>
+                                </div>
+                            </td>
+                            <td>
+                                <input class="obs-input" type="text" name="obs_{{ i.pk }}" maxlength="200" placeholder="—"
+                                       value="{{ i.observacion|default:'' }}" aria-label="Observación de {{ i.estudiante.usuario.nombres }} {{ i.estudiante.usuario.ap_pat }}">
+                            </td>
+                        </tr>
+                        {% endwith %}
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-empty py-4">No hay estudiantes inscritos en este curso.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary-custom btn-pill-lg" type="submit">Guardar asistencia</button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

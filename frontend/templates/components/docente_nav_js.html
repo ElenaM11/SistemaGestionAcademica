@@ -1,0 +1,18 @@
+<script>
+(function () {
+    var boton = document.getElementById('hamburgerBtn');
+    var nav = document.getElementById('sidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    if (!boton || !nav) { return; }
+
+    function alternar(forzar) {
+        var abierto = nav.classList.toggle('show', forzar);
+        if (overlay) { overlay.classList.toggle('show', abierto); }
+        boton.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+    }
+
+    boton.addEventListener('click', function () { alternar(); });
+    if (overlay) { overlay.addEventListener('click', function () { alternar(false); }); }
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { alternar(false); } });
+})();
+</script>

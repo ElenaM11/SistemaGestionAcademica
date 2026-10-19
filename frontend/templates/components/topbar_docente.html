@@ -1,0 +1,26 @@
+{# Barra superior fija del docente. Usa las clases de admin_layout.css.
+   Contexto: usuario (nombres, ap_pat). Opcional: search_url. #}
+{% url 'docente_dashboard' as dash_url %}
+<header class="app-topbar">
+    <button class="hamburger-btn" id="hamburgerBtn" type="button" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false">
+        <i class="bi bi-list"></i>
+    </button>
+    <a class="brand" href="{{ dash_url }}">
+        <span class="logo-text">da | vinci</span>
+        <div class="logo-sub">EDUCATIVO</div>
+    </a>
+    <form class="search-box" method="get" action="{{ search_url|default:dash_url }}" role="search">
+        <input type="search" name="q" value="{{ q|default:'' }}" maxlength="100"
+               placeholder="Buscar" aria-label="Buscar" autocomplete="off">
+    </form>
+    <div class="user-info">
+        <a href="{% url 'perfil' %}" class="profile-link" title="Mi perfil">
+            <div>
+                <div class="user-name">{{ usuario.nombres }} {{ usuario.ap_pat }}</div>
+                <div class="user-role">Docente</div>
+            </div>
+            <div class="user-avatar">{{ usuario.nombres|first|upper }}{{ usuario.ap_pat|first|upper }}</div>
+        </a>
+        <a href="{% url 'logout' %}" class="btn-logout">Cerrar sesión</a>
+    </div>
+</header>
