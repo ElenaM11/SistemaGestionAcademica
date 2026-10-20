@@ -43,6 +43,58 @@ def validar_rol_pagina(request, nombre_rol):
     return usuario, None
 
 
+def modulo_estudiante(request):
+    """Muestro las secciones del curso seleccionado por el estudiante autenticado."""
+    usuario, respuesta = validar_rol_pagina(request, 'Estudiante')
+    if respuesta:
+        return respuesta
+    estudiante = get_object_or_404(Estudiante, pk=usuario.pk)
+    paralelos = Paralelo.objects.filter(
+        inscripciones__estudiante=estudiante, inscripciones__estado='ACTIVO', estado='ACTIVO'
+    ).select_related('curso__idioma', 'curso__nivel', 'turno', 'docente__usuario').distinct().order_by('curso__nombre')
+    paralelo_id = request.GET.get('id_paralelo')
+    paralelo = get_object_or_404(paralelos, pk=paralelo_id) if paralelo_id else None
+    vista = request.GET.get('vista', 'materiales')
+    if vista not in ('materiales', 'tareas', 'progreso', 'asistencia'):
+        vista = 'materiales'
+    return render(request, 'estudiante/academico.html', {
+        'usuario': usuario, 'paralelos': paralelos, 'paralelo': paralelo,
+        'vista': vista, 'active_tab': 'tareas' if vista == 'tareas' else 'cursos',
+    })
+
+
+def progreso_docente_pagina(request):
+    """Muestro el progreso de los estudiantes del docente autenticado."""
+    usuario, respuesta = validar_rol_pagina(request, 'Docente')
+    if respuesta:
+        return respuesta
+    docente = get_object_or_404(Docente, pk=usuario.pk)
+    paralelos = Paralelo.objects.filter(docente=docente, estado='ACTIVO').select_related(
+        'curso__idioma', 'curso__nivel', 'turno'
+    ).order_by('curso__nombre', 'codigo')
+    paralelo_id = request.GET.get('id_paralelo')
+    if paralelo_id and not paralelos.filter(pk=paralelo_id).exists():
+        return HttpResponseForbidden('No tienes acceso al progreso de este paralelo.')
+    return render(request, 'docente/progreso_general.html', {
+        'usuario': usuario, 'paralelos': paralelos, 'paralelo_id': paralelo_id,
+        'active_tab': 'progreso',
+    })
+
+
+def resumen_admin_pagina(request):
+    """Muestro los indicadores académicos generales al administrador."""
+    usuario, respuesta = validar_rol_pagina(request, 'Administrador')
+    if respuesta:
+        return respuesta
+    cursos = Curso.objects.filter(paralelos__estado='ACTIVO').distinct().order_by('nombre')
+    return render(request, 'admin_panel/resumen_academico.html', {
+        'active_tab': 'academico',
+        'cursos': cursos,
+        'curso_id': request.GET.get('curso_id', ''),
+        'busqueda': request.GET.get('busqueda', ''),
+    })
+
+
 def catalogo_cursos_pagina(request):
     """Muestro y preparo la edición del catálogo para el administrador."""
     usuario, respuesta = validar_rol_pagina(request, 'Administrador')

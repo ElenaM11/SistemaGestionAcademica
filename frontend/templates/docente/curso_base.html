@@ -12,6 +12,11 @@
         <p>{% block subtitulo %}{% endblock %}</p>
     </section>
     {% block tabs %}{% include 'components/curso_tabs.html' %}{% endblock %}
+    {% if messages %}
+    {% for m in messages %}
+    <div class="alert alert-{% if m.tags == 'error' %}danger{% else %}{{ m.tags|default:'info' }}{% endif %}" role="alert">{{ m }}</div>
+    {% endfor %}
+    {% endif %}
     {% block curso_contenido %}{% endblock %}
 </main>
 {% endblock %}

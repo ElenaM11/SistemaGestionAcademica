@@ -1,7 +1,18 @@
 from rest_framework import serializers
 
-from .models import Curso, DocenteIdioma, EstudianteParalelo, Idioma, Nivel, Programa, Turno
+from .models import (
+    Curso,
+    DocenteIdioma,
+    EstudianteParalelo,
+    Idioma,
+    Nivel,
+    Programa,
+    Turno,
+)
 
+from actividades.models import Actividad, Entrega
+from asistencia.models import Asistencia
+from materiales.models import Material
 
 class IdiomaSerializer(serializers.ModelSerializer):
     """Convierto los datos del catálogo de idiomas a JSON."""
@@ -135,3 +146,39 @@ class DocenteIdiomaSerializer(serializers.ModelSerializer):
 class DocenteIdiomaEntradaSerializer(serializers.Serializer):
     """Valido el idioma que el administrador habilita para un docente."""
     id_idioma = serializers.IntegerField()
+
+
+class MaterialSerializer(serializers.ModelSerializer):
+    """Represento los materiales publicados para los estudiantes."""
+    id_material = serializers.IntegerField(source='id', read_only=True)
+    paralelo_codigo = serializers.CharField(source='paralelo.codigo', read_only=True)
+    curso_nombre = serializers.CharField(source='paralelo.curso.nombre', read_only=True)
+
+    class Meta:
+        """Defino los campos visibles de un material."""
+        model = Material
+        fields = ('id_material', 'paralelo', 'paralelo_codigo', 'curso_nombre', 'titulo', 'descripcion', 'tipo', 'archivo', 'url', 'fecha_publicacion')
+        read_only_fields = ('id_material', 'paralelo', 'paralelo_codigo', 'curso_nombre', 'fecha_publicacion')
+
+class ActividadSerializer(serializers.ModelSerializer):
+    """Represento actividades y sus plazos para estudiantes y docentes."""
+    id_actividad = serializers.IntegerField(source='id', read_only=True)
+    curso_nombre = serializers.CharField(source='paralelo.curso.nombre', read_only=True)
+    paralelo_codigo = serializers.CharField(source='paralelo.codigo', read_only=True)
+
+    class Meta:
+        """Defino los campos editables al publicar una actividad."""
+        model = Actividad
+        fields = ('id_actividad', 'paralelo', 'paralelo_codigo', 'curso_nombre', 'titulo', 'instrucciones', 'tipo', 'fecha_publicacion', 'fecha_limite', 'puntaje_maximo', 'permite_entrega_tardia', 'usa_ia', 'estado')
+        read_only_fields = ('id_actividad', 'paralelo', 'paralelo_codigo', 'curso_nombre', 'fecha_publicacion')
+
+class EntregaEntradaSerializer(serializers.Serializer):
+    """Valido el texto y archivo enviados para una entrega."""
+    contenido_texto = serializers.CharField(required=False, allow_blank=True)
+    archivo = serializers.FileField(required=False, allow_null=True, max_length=500)
+
+    def validate(self, datos):
+        """Exijo texto o referencia a archivo en cada entrega."""
+        if not datos.get('contenido_texto') and not datos.get('archivo'):
+            raise serializers.ValidationError('Debes escribir una respuesta o adjuntar un archivo.')
+        return datos

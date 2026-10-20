@@ -1,9 +1,11 @@
-{# Riel de iconos + subpanel "Mis cursos" del docente.
+{% comment %}
+ Riel de iconos + subpanel "Mis cursos" del docente.
    Parametros (todos opcionales):
      active_rail   -> 'actividad' | 'chat' | 'equipos' | 'tareas' | 'llamadas'
      nav_url_name  -> nombre de la url a la que apunta cada curso del subpanel
                       (recibe curso_id). Por defecto: docente_estudiantes_curso.
-   Contexto: paralelos (cada item con curso_id, curso.idioma, curso.nivel, turno), curso. #}
+   Contexto: paralelos (cada item con curso_id, curso.idioma, curso.nivel, turno), curso. 
+{% endcomment %}
 <div class="app-nav" id="sidebar">
     <ul class="rail">
         <li>
@@ -17,7 +19,7 @@
             </a>
         </li>
         <li>
-            <a class="rail-link {% if active_rail == 'equipos' %}active{% endif %}" href="#">
+            <a class="rail-link {% if active_rail == 'equipos' %}active{% endif %}" href="{% url 'docente_estudiantes_curso' curso.id_curso %}">
                 <i class="bi bi-people"></i><span>Equipos</span>
             </a>
         </li>
@@ -33,19 +35,19 @@
         </li>
     </ul>
 
-    <aside class="subpanel" aria-label="Mis cursos">
+    <aside class="subpanel course-subnav" aria-label="Mis cursos">
         <h4>Mis cursos</h4>
         {% with destino=nav_url_name|default:'docente_estudiantes_curso' %}
         {% for grupo in paralelos %}
             {% if grupo.curso_id == curso.id_curso %}
-            <a class="sub-item active" href="{% url destino grupo.curso_id %}" aria-current="page">
+            <a class="sub-item active" href="{% url destino grupo.curso_id %}" aria-current="page" title="{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}">
                 <span class="chip c-orange">{{ grupo.curso.nivel.codigo }}</span>
-                {{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}
+                <span class="sub-text">{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}</span>
             </a>
             {% else %}
-            <a class="sub-item" href="{% url destino grupo.curso_id %}">
+            <a class="sub-item" href="{% url destino grupo.curso_id %}" title="{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}">
                 <span class="chip {% cycle 'c-dark' 'c-gray' %}">{{ grupo.curso.nivel.codigo }}</span>
-                {{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}
+                <span class="sub-text">{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}</span>
             </a>
             {% endif %}
         {% endfor %}

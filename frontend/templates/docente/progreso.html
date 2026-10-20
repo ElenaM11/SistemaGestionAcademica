@@ -1,9 +1,9 @@
-{% extends 'docente/curso_base.html' %}
+﻿{% extends 'docente/curso_base.html' %}
 {# Pantalla 12: progreso del docente.
    Contexto: progreso (lista). Cada item: estudiante.usuario (nombres, ap_pat), promedio,
    entregadas, total_actividades, asistencia_pct (numero, sin %), necesita_apoyo (booleano calculado en la vista). #}
 {% block title %}Progreso - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
-{% block docente_nav %}{% include 'components/docente_nav.html' with nav_url_name='docente_progreso' %}{% endblock %}
+{% block docente_nav %}{% include 'components/docente_nav.html' with active_rail='equipos' nav_url_name='docente_progreso' %}{% endblock %}
 {% block subtitulo %}Desempeño integral de tus estudiantes{% endblock %}
 {% block tabs %}{% include 'components/curso_tabs.html' with tab_activa='progreso' %}{% endblock %}
 

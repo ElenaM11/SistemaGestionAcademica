@@ -10,6 +10,7 @@
 {% block tabs %}{% include 'components/curso_tabs.html' with tab_activa='tareas' %}{% endblock %}
 
 {% block curso_contenido %}
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
 <div class="course-grid">
     <section class="panel-card">
         <div class="pill-row">
@@ -57,7 +58,14 @@
             <input type="hidden" name="estudiante" value="{{ seleccionada.estudiante.pk }}">
             <div class="mb-3">
                 <span class="form-label d-block" id="respuestaEtiqueta">Respuesta del estudiante</span>
-                <div class="response-box" role="textbox" aria-readonly="true" aria-labelledby="respuestaEtiqueta">{{ seleccionada.contenido|default:'Este estudiante aún no envió su respuesta.' }}</div>
+                <div class="response-box" role="textbox" aria-readonly="true" aria-labelledby="respuestaEtiqueta">{% if seleccionada.estado == 'sin_entregar' %}Este estudiante aún no envió su respuesta.{% else %}{{ seleccionada.contenido|default:'(Entrega solo con archivo adjunto)' }}{% endif %}</div>
+                {% if seleccionada.tiene_archivo %}
+                <p class="mt-2 mb-0">
+                    <a href="{% url 'docente_entrega_archivo' curso.id_curso actividad.pk seleccionada.entrega_id %}" target="_blank" rel="noopener">Abrir archivo entregado</a>
+                    <span aria-hidden="true">·</span>
+                    <a href="{% url 'docente_entrega_archivo' curso.id_curso actividad.pk seleccionada.entrega_id %}?descargar=1">Descargar</a>
+                </p>
+                {% endif %}
             </div>
             <div class="mb-3">
                 <label class="form-label" for="nota">Calificación (sobre {{ actividad.puntaje_maximo }})</label>

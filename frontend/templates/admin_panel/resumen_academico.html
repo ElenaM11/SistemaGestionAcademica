@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Resumen académico - Da Vinci{% endblock %}
+{% block content %}
+{% include 'components/topbar.html' with user_name=request.session.usuario_nombre user_role='Administrador' initials=request.session.usuario_iniciales %}
+{% include 'components/sidebar_admin.html' with active_tab='academico' %}
+<main class="app-main no-panel">
+  <div class="purple-banner mb-4">
+    <h2 class="mb-1">Información académica general</h2>
+    <p class="mb-0">Consulta indicadores agregados por curso o busca el progreso de un estudiante.</p>
+  </div>
+
+  <section class="card p-3 p-md-4 mb-4" aria-label="Filtros académicos">
+    <form id="filtrosAcademicos" class="row g-3 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label fw-semibold" for="filtroCurso">Curso</label>
+        <select class="form-select" id="filtroCurso" name="curso_id">
+          <option value="">Todos los cursos</option>
+          {% for curso in cursos %}
+          <option value="{{ curso.pk }}" {% if curso.pk|stringformat:'s' == curso_id %}selected{% endif %}>{{ curso.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label fw-semibold" for="busquedaEstudiante">Estudiante</label>
+        <input class="form-control" id="busquedaEstudiante" name="busqueda" type="search"
+               value="{{ busqueda }}" maxlength="100"
+               placeholder="Nombre, apellido, correo o código">
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button class="btn btn-primary-custom flex-grow-1" type="submit">Filtrar</button>
+        <button class="btn btn-outline-secondary" id="limpiarFiltros" type="button" title="Limpiar filtros">Limpiar</button>
+      </div>
+    </form>
+  </section>
+
+  <div id="resultado" class="alert alert-info">Cargando indicadores académicos…</div>
+  <div id="indicadores" class="row g-3 mb-4"></div>
+
+  <section class="table-custom mb-4">
+    <div class="p-3 pb-0"><h3 class="h5 mb-0">Resumen por curso</h3></div>
+    <div class="table-responsive">
+      <table class="table table-custom mb-0">
+        <thead><tr><th>Curso</th><th>Docentes</th><th>Estudiantes activos</th><th>Promedio</th><th>Asistencia</th></tr></thead>
+        <tbody id="filasCursos"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="seccionEstudiantes" class="table-custom mb-4" hidden>
+    <div class="p-3 pb-0"><h3 class="h5 mb-0">Resultados de estudiantes</h3></div>
+    <div class="table-responsive">
+      <table class="table table-custom mb-0">
+        <thead><tr><th>Estudiante</th><th>Código</th><th>Curso</th><th>Paralelos</th><th>Promedio</th><th>Entregas</th><th>Asistencia</th></tr></thead>
+        <tbody id="filasEstudiantes"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.getElementById('hamburgerBtn')?.addEventListener('click',()=>document.querySelector('.app-nav')?.classList.toggle('show'));
+const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const formato=v=>v==null?'—':esc(v);
+const form=document.querySelector('#filtrosAcademicos');
+const mensaje=document.querySelector('#resultado');
+const parametroInicial=new URLSearchParams(window.location.search);
+if(!document.querySelector('#filtroCurso').value&&parametroInicial.has('curso_id'))document.querySelector('#filtroCurso').value=parametroInicial.get('curso_id');
+if(!document.querySelector('#busquedaEstudiante').value&&parametroInicial.has('busqueda'))document.querySelector('#busquedaEstudiante').value=parametroInicial.get('busqueda');
+async function cargarResumen(){
+  const params=new URLSearchParams();
+  const curso=document.querySelector('#filtroCurso').value;
+  const busqueda=document.querySelector('#busquedaEstudiante').value.trim();
+  if(curso)params.set('curso_id',curso);
+  if(busqueda)params.set('busqueda',busqueda);
+  const query=params.toString();
+  history.replaceState(null,'',window.location.pathname+(query?'?'+query:''));
+  mensaje.hidden=false;
+  mensaje.className='alert alert-info';
+  mensaje.textContent='Cargando indicadores académicos…';
+  try{
+    const respuesta=await fetch('/api/admin/resumen-academico/'+(query?'?'+query:''));
+    const datos=await respuesta.json();
+    if(!respuesta.ok)throw Error(datos.detalle||'No se pudo cargar el resumen académico (HTTP '+respuesta.status+').');
+    mensaje.hidden=true;
+    document.querySelector('#indicadores').innerHTML=[
+      ['Estudiantes activos',datos.estudiantes_activos],
+      ['Promedio general',datos.promedio_general],
+      ['Asistencia general',datos.asistencia_general==null?null:datos.asistencia_general+'%']
+    ].map(item=>'<div class="col-md-4"><div class="stats-card"><div class="stat-label">'+esc(item[0])+'</div><div class="stat-number">'+formato(item[1])+'</div></div></div>').join('');
+    document.querySelector('#filasCursos').innerHTML=datos.cursos.map(curso=>
+      '<tr><td>'+esc(curso.curso)+'</td><td>'+curso.docentes.map(esc).join(', ')+'</td><td>'+curso.estudiantes_activos+'</td><td>'+formato(curso.promedio)+'</td><td>'+(curso.asistencia_porcentaje==null?'—':esc(curso.asistencia_porcentaje)+'%')+'</td></tr>'
+    ).join('')||'<tr><td colspan="5" class="text-center text-muted py-4">No hay cursos activos para estos filtros.</td></tr>';
+    const seccion=document.querySelector('#seccionEstudiantes');
+    seccion.hidden=!busqueda;
+    if(busqueda){
+      document.querySelector('#filasEstudiantes').innerHTML=datos.estudiantes.map(estudiante=>
+        '<tr><td>'+esc(estudiante.estudiante)+'</td><td>'+formato(estudiante.codigo_estudiante)+'</td><td>'+esc(estudiante.curso)+'</td><td>'+estudiante.paralelos.map(esc).join(', ')+'</td><td>'+formato(estudiante.promedio)+'</td><td>'+estudiante.entregas+' / '+estudiante.actividades_totales+'</td><td>'+(estudiante.asistencia_porcentaje==null?'—':esc(estudiante.asistencia_porcentaje)+'%')+'</td></tr>'
+      ).join('')||'<tr><td colspan="7" class="text-center text-muted py-4">No se encontraron estudiantes con esos criterios.</td></tr>';
+    }
+  }catch(error){
+    mensaje.className='alert alert-warning';
+    mensaje.textContent=error.message;
+  }
+}
+form.addEventListener('submit',evento=>{evento.preventDefault();cargarResumen();});
+document.querySelector('#limpiarFiltros').addEventListener('click',()=>{
+  document.querySelector('#filtroCurso').value='';
+  document.querySelector('#busquedaEstudiante').value='';
+  history.replaceState(null,'',window.location.pathname);
+  cargarResumen();
+});
+cargarResumen();
+</script>
+{% endblock %}

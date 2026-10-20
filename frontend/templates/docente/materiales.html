@@ -1,94 +1,133 @@
 {% extends 'docente/curso_base.html' %}
-{# Pantalla 01: publicar material.
-   Contexto: materiales (tipo, titulo, fecha_publicacion), cantidad_estudiantes, error (opcional). #}
+{% comment %}
+  Materiales del curso (HU-09): lista de materiales publicados y un boton "Subir material"
+  que abre el formulario en una ventana (modal).
+  Contexto: materiales (tipo, titulo, descripcion, archivo, url, fecha_publicacion),
+  cantidad_estudiantes, error (opcional).
+{% endcomment %}
 {% block title %}Materiales - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
-{% block docente_nav %}{% include 'components/docente_nav.html' with nav_url_name='docente_materiales' %}{% endblock %}
+{% block docente_nav %}{% include 'components/docente_nav.html' with active_rail='equipos' nav_url_name='docente_materiales' %}{% endblock %}
 {% block subtitulo %}Publica recursos para los estudiantes del curso{% endblock %}
 {% block tabs %}{% include 'components/curso_tabs.html' with tab_activa='materiales' %}{% endblock %}
 
 {% block curso_contenido %}
-<div class="course-grid">
-    <section class="panel-card">
-        <h5 class="panel-title">Nuevo material</h5>
-        {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
-        <form method="post" enctype="multipart/form-data" action="{% url 'docente_materiales' curso.id_curso %}">
-            {% csrf_token %}
-            <div class="mb-3">
-                <label class="form-label" for="titulo">Título</label>
-                <input class="form-control" type="text" id="titulo" name="titulo" maxlength="150" required value="{{ request.POST.titulo }}">
-            </div>
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label class="form-label" for="tipo">Tipo</label>
-                    <select class="form-select" id="tipo" name="tipo">
-                        <option value="pdf" {% if request.POST.tipo == 'pdf' %}selected{% endif %}>Documento PDF</option>
-                        <option value="audio" {% if request.POST.tipo == 'audio' %}selected{% endif %}>Audio MP3</option>
-                        <option value="video" {% if request.POST.tipo == 'video' %}selected{% endif %}>Video</option>
-                        <option value="enlace" {% if request.POST.tipo == 'enlace' %}selected{% endif %}>Enlace externo</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label" for="enlace">Enlace (opcional)</label>
-                    <input class="form-control" type="url" id="enlace" name="enlace" placeholder="https://" value="{{ request.POST.enlace }}">
-                </div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label" for="descripcion">Descripción</label>
-                <input class="form-control" type="text" id="descripcion" name="descripcion" maxlength="255" value="{{ request.POST.descripcion }}">
-            </div>
-
-            <label class="dropzone" id="dropzone" for="archivo">
-                <span id="dropzoneTexto">Arrastra un archivo o haz clic para subirlo</span>
-            </label>
-            <input class="visually-hidden" type="file" id="archivo" name="archivo">
-
-            <p class="notice-ok">Se notificará a los {{ cantidad_estudiantes }} estudiantes del curso.</p>
-
-            <div class="form-actions">
-                <a class="btn btn-secondary-custom btn-pill-lg" href="{% url 'docente_materiales' curso.id_curso %}">Cancelar</a>
-                <button class="btn btn-primary-custom btn-pill-lg" type="submit">Publicar material</button>
-            </div>
-        </form>
-    </section>
-
-    <section class="panel-card">
-        <h5 class="panel-title">Materiales publicados</h5>
-        {% if materiales %}
-        <ul class="material-list">
-            {% for m in materiales %}
-            <li class="material-item">
-                <span class="file-chip {% if m.tipo == 'pdf' %}file-chip--pdf{% elif m.tipo == 'audio' %}file-chip--mp3{% else %}file-chip--url{% endif %}" aria-hidden="true">
-                    {% if m.tipo == 'pdf' %}PDF{% elif m.tipo == 'audio' %}MP3{% else %}URL{% endif %}
-                </span>
-                <div class="material-main">
-                    <div class="material-title">{{ m.titulo }}</div>
-                    <div class="material-actions">
-                        <a href="{% url 'docente_material_editar' curso.id_curso m.pk %}">Editar</a>
-                        <span aria-hidden="true">·</span>
-                        <form method="post" action="{% url 'docente_material_eliminar' curso.id_curso m.pk %}" class="d-inline"
-                              onsubmit="return confirm('¿Eliminar este material?');">
-                            {% csrf_token %}
-                            <button type="submit" class="link-button">Eliminar</button>
-                        </form>
-                    </div>
-                </div>
-                <span class="material-date">{{ m.fecha_publicacion|date:'d b' }}</span>
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <div class="empty-state">
-            <i class="bi bi-folder2-open"></i>
-            Aún no publicaste materiales. Usa el formulario para subir el primero.
+<section class="panel-card">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+            <h5 class="panel-title mb-0">Materiales publicados</h5>
+            <small class="text-muted">{{ materiales|length }} material{{ materiales|length|pluralize:"es" }}</small>
         </div>
-        {% endif %}
-    </section>
+        <button type="button" class="btn btn-primary-custom btn-pill-lg" data-bs-toggle="modal" data-bs-target="#modalMaterial">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> Subir material
+        </button>
+    </div>
+
+    {% if materiales %}
+    <ul class="material-list">
+        {% for m in materiales %}
+        <li class="material-item">
+            <span class="file-chip file-chip--{{ m.estilo }}" aria-hidden="true">{{ m.etiqueta }}</span>
+            <div class="material-main">
+                <div class="material-title">{{ m.titulo }}</div>
+                {% if m.descripcion %}<div class="text-muted small">{{ m.descripcion }}</div>{% endif %}
+                <div class="material-actions">
+                    {% if m.archivo %}
+                    <a href="{{ m.archivo.url }}" target="_blank" rel="noopener">Abrir</a>
+                    <span aria-hidden="true">·</span>
+                    {% elif m.url %}
+                    <a href="{{ m.url }}" target="_blank" rel="noopener">Abrir enlace</a>
+                    <span aria-hidden="true">·</span>
+                    {% endif %}
+                    <a href="{% url 'docente_material_editar' curso.id_curso m.pk %}">Editar</a>
+                    <span aria-hidden="true">·</span>
+                    <form method="post" action="{% url 'docente_material_eliminar' curso.id_curso m.pk %}" class="d-inline"
+                          onsubmit="return confirm('¿Eliminar este material?');">
+                        {% csrf_token %}
+                        <button type="submit" class="link-button">Eliminar</button>
+                    </form>
+                </div>
+            </div>
+            <span class="material-date">{{ m.fecha_publicacion|date:'d b' }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-folder2-open"></i>
+        Aún no publicaste materiales. Pulsa «Subir material» para publicar el primero.
+    </div>
+    {% endif %}
+</section>
+
+<div class="modal fade" id="modalMaterial" tabindex="-1" aria-labelledby="modalMaterialTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" enctype="multipart/form-data" action="{% url 'docente_materiales' curso.id_curso %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalMaterialTitulo">Nuevo material</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+                    <div class="mb-3">
+                        <label class="form-label" for="titulo">Título</label>
+                        <input class="form-control" type="text" id="titulo" name="titulo" maxlength="150" required value="{{ request.POST.titulo }}">
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="tipo">Tipo</label>
+                            <select class="form-select" id="tipo" name="tipo">
+                                <option value="pdf" {% if request.POST.tipo == 'pdf' %}selected{% endif %}>Documento (PDF, Word, PowerPoint…)</option>
+                                <option value="audio" {% if request.POST.tipo == 'audio' %}selected{% endif %}>Audio MP3</option>
+                                <option value="video" {% if request.POST.tipo == 'video' %}selected{% endif %}>Video</option>
+                                <option value="enlace" {% if request.POST.tipo == 'enlace' %}selected{% endif %}>Enlace externo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="enlace">Enlace (opcional)</label>
+                            <input class="form-control" type="url" id="enlace" name="enlace" placeholder="https://" value="{{ request.POST.enlace }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="descripcion">Descripción</label>
+                        <input class="form-control" type="text" id="descripcion" name="descripcion" maxlength="255" value="{{ request.POST.descripcion }}">
+                    </div>
+
+                    <label class="dropzone" id="dropzone" for="archivo">
+                        <span id="dropzoneTexto">Arrastra un archivo o haz clic para subirlo (PDF, Word, PowerPoint, Excel, audio o video; máx. 20 MB)</span>
+                    </label>
+                    <input class="visually-hidden" type="file" id="archivo" name="archivo"
+                           accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.mp3,.wav,.m4a,.mp4,.mov,.png,.jpg,.jpeg">
+
+                    <p class="notice-ok mt-3 mb-0">Se notificará a los {{ cantidad_estudiantes }} estudiantes del curso.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary-custom btn-pill-lg" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary-custom btn-pill-lg">Publicar material</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block page_js %}
 <script>
 (function () {
+    var modal = document.getElementById('modalMaterial');
+    if (!modal) { return; }
+    // Se mueve al <body> para que ninguna barra fija quede por encima de la ventana.
+    document.body.appendChild(modal);
+    modal.addEventListener('shown.bs.modal', function () {
+        var titulo = document.getElementById('titulo');
+        if (titulo) { titulo.focus(); }
+    });
+    {% if error %}
+    // Si el servidor devolvió un error, se vuelve a abrir el formulario para mostrarlo.
+    bootstrap.Modal.getOrCreateInstance(modal).show();
+    {% endif %}
+
     var zona = document.getElementById('dropzone');
     var entrada = document.getElementById('archivo');
     var texto = document.getElementById('dropzoneTexto');

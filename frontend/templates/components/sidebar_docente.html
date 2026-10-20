@@ -25,10 +25,13 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {% if active_tab == 'tareas' %}active{% endif %}" href="#">
+            {% with p=paralelos.0 %}
+            <a class="nav-link {% if active_tab == 'tareas' %}active{% endif %}"
+               href="{% if p %}{% url 'docente_actividades' p.curso_id %}{% else %}{% url 'docente_dashboard' %}{% endif %}">
                 <i class="bi bi-clipboard-check"></i>
                 <span>Tareas</span>
             </a>
+            {% endwith %}
         </li>
         <li class="nav-item">
             <a class="nav-link {% if active_tab == 'examenes' %}active{% endif %}" href="#">

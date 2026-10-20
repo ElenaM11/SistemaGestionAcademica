@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from usuarios.models import Docente, Estudiante
 
@@ -135,3 +136,4 @@ class EstudianteParalelo(models.Model):
         """Aplico la unicidad definida para estudiante y paralelo."""
         db_table = 'estudiante_paralelo'
         constraints = [models.UniqueConstraint(fields=['estudiante', 'paralelo'], name='uq_estudiante_paralelo')]
+

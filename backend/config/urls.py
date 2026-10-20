@@ -1,5 +1,3 @@
-"""URL configuration for config project."""
-
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -13,9 +11,15 @@ urlpatterns = [
 
     path("api/", include("cursos.urls")),
 
+    # Rutas del rol docente
+    path("panel/docente/cursos/<int:curso_id>/materiales/",include("materiales.urls")),
+    path("panel/docente/cursos/<int:curso_id>/actividades/",include("actividades.urls")),
+    path("panel/docente/cursos/<int:curso_id>/asistencia/",include("asistencia.urls")),
+    path("panel/docente/cursos/<int:curso_id>/progreso/",include("actividades.urls_progreso")),
+]
 
-    path("panel/docente/cursos/<int:curso_id>/materiales/", include("materiales.urls")),
-    path("panel/docente/cursos/<int:curso_id>/actividades/", include("actividades.urls")),
-    path("panel/docente/cursos/<int:curso_id>/asistencia/", include("asistencia.urls")),
-    path("panel/docente/cursos/<int:curso_id>/progreso/", include("actividades.urls_progreso")),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+if settings.DEBUG:
+    urlpatterns += static(
+        settings.MEDIA_URL,
+        document_root=settings.MEDIA_ROOT
+    )

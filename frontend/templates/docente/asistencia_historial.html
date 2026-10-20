@@ -4,11 +4,25 @@
    Cada item de resumen: estudiante.usuario (nombres, ap_pat), presentes, ausentes, tardanzas,
    total_sesiones, en_riesgo (booleano calculado en la vista). #}
 {% block title %}Seguimiento de asistencia - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
-{% block docente_nav %}{% include 'components/docente_nav.html' with nav_url_name='docente_asistencia_historial' %}{% endblock %}
+{% block docente_nav %}{% include 'components/docente_nav.html' with active_rail='equipos' nav_url_name='docente_asistencia_historial' %}{% endblock %}
 {% block subtitulo %}Seguimiento de inasistencias del curso{% endblock %}
 {% block tabs %}{% include 'components/curso_tabs.html' with tab_activa='asistencia' %}{% endblock %}
 
 {% block curso_contenido %}
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+<form method="get" action="{% url 'docente_asistencia_historial' curso.id_curso %}" class="d-flex align-items-end flex-wrap gap-2 mb-3">
+    <div>
+        <label class="form-label mb-0" for="desde">Desde</label>
+        <input class="form-control" type="date" id="desde" name="desde" value="{{ desde|date:'Y-m-d' }}">
+    </div>
+    <div>
+        <label class="form-label mb-0" for="hasta">Hasta</label>
+        <input class="form-control" type="date" id="hasta" name="hasta" value="{{ hasta|date:'Y-m-d' }}">
+    </div>
+    <button class="btn btn-secondary-custom" type="submit">Filtrar</button>
+    {% if desde or hasta %}<a class="btn btn-secondary-custom" href="{% url 'docente_asistencia_historial' curso.id_curso %}">Quitar filtro</a>{% endif %}
+    <a class="ms-auto" href="{% url 'docente_asistencia' curso.id_curso %}">Registrar o modificar una sesión</a>
+</form>
 <div class="metric-grid">
     <article class="metric-card metric-card--orange">
         <h5 class="metric-label">Asistencia promedio</h5>
@@ -48,9 +62,9 @@
                     <td>{{ item.tardanzas }}</td>
                     <td>
                         <div class="att-meter">
-                            <progress class="att-progress" value="{{ item.presentes }}" max="{{ item.total_sesiones|default:1 }}"
+                            <progress class="att-progress" value="{{ item.asistidas }}" max="{{ item.total_sesiones|default:1 }}"
                                     aria-label="Asistencia de {{ item.estudiante.usuario.nombres }} {{ item.estudiante.usuario.ap_pat }}"></progress>
-                            <span>{{ item.presentes }}/{{ item.total_sesiones }}</span>
+                            <span>{{ item.asistidas }}/{{ item.total_sesiones }}{% if item.pct is not None %} · {{ item.pct }}%{% endif %}</span>
                         </div>
                     </td>
                 </tr>

@@ -5,8 +5,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 
 def _aware(dt):
-    """Las columnas son `timestamp` (sin zona): al leerlas pueden venir naive.
-    Se asumen UTC, que es como las guarda Django cuando USE_TZ=True."""
+
     if dt is not None and timezone.is_naive(dt) and settings.USE_TZ:
         return timezone.make_aware(dt, dt_timezone.utc)
     return dt

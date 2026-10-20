@@ -1,6 +1,11 @@
 <div class="app-nav" id="sidebar">
     <ul class="rail">
         <li>
+            <a class="rail-link {% if active_tab == 'academico' %}active{% endif %}" href="{% url 'admin_resumen_academico' %}">
+                <i class="bi bi-graph-up"></i><span>Progreso académico</span>
+            </a>
+        </li>
+        <li>
             <a class="rail-link {% if active_tab == 'actividad' %}active{% endif %}" href="#">
                 <i class="bi bi-bell"></i><span>Actividad</span>
             </a>

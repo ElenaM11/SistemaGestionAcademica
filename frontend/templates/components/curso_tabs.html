@@ -1,8 +1,6 @@
-{# Tabs de seccion del curso.
-   Parametro: tab_activa -> 'resumen' | 'materiales' | 'tareas' | 'estudiantes' | 'asistencia' | 'progreso'
-   Contexto: curso (id_curso). #}
-<nav class="course-tabs" aria-label="Secciones del curso">
-    <a class="course-tab {% if tab_activa == 'resumen' %}is-active{% endif %}" href="{% url 'docente_resumen' curso.id_curso %}"{% if tab_activa == 'resumen' %} aria-current="page"{% endif %}>Resumen</a>
+{% comment %} Tabs de seccion del curso. Parametro: tab_activa -> 'resumen' | 'materiales' | 'tareas' | 'estudiantes' | 'asistencia' | 'progreso' Contexto: curso (id_curso). {% endcomment %}
+<nav class="course-tabs" aria-label="Secciones del curso" style="overflow-y: hidden;">
+    <a class="course-tab {% if tab_activa == 'resumen' %}is-active{% endif %}" href="{% url 'docente_estudiantes_curso' curso.id_curso %}"{% if tab_activa == 'resumen' %} aria-current="page"{% endif %}>Resumen</a>
     <a class="course-tab {% if tab_activa == 'materiales' %}is-active{% endif %}" href="{% url 'docente_materiales' curso.id_curso %}"{% if tab_activa == 'materiales' %} aria-current="page"{% endif %}>Materiales</a>
     <a class="course-tab {% if tab_activa == 'tareas' %}is-active{% endif %}" href="{% url 'docente_actividades' curso.id_curso %}"{% if tab_activa == 'tareas' %} aria-current="page"{% endif %}>Tareas</a>
     <a class="course-tab {% if tab_activa == 'estudiantes' %}is-active{% endif %}" href="{% url 'docente_estudiantes_curso' curso.id_curso %}"{% if tab_activa == 'estudiantes' %} aria-current="page"{% endif %}>Estudiantes</a>
