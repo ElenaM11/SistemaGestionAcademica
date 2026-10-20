@@ -15,11 +15,15 @@ class Usuario(models.Model):
 
     ap_pat = models.CharField(
         max_length=100,
+        null=True,      
+        blank=True,     
         db_column='ApPat'
     )
 
     ap_mat = models.CharField(
         max_length=100,
+        null=True,      
+        blank=True,     
         db_column='ApMat'
     )
 

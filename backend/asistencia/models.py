@@ -1,7 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 
-
 class SesionClase(models.Model):
     class Estado(models.TextChoices):
         PROGRAMADA = "PROGRAMADA", "Programada"
@@ -18,10 +17,10 @@ class SesionClase(models.Model):
     hora_fin = models.TimeField(blank=True, null=True, db_column="horafin")
     tema = models.CharField(max_length=200, blank=True, null=True)
     tipo = models.CharField(max_length=50, blank=True, null=True)
-    sala_livekit = models.CharField(max_length=200, blank=True, null=True, db_column="salalivekit")  # Sprint 4
+    sala_livekit = models.CharField(max_length=200, blank=True, null=True, db_column="salalivekit")  
     estado = models.CharField(max_length=30, choices=Estado.choices, default=Estado.PROGRAMADA)
-    inicio_real = models.DateTimeField(blank=True, null=True, db_column="inicioreal")                # Sprint 4
-    fin_real = models.DateTimeField(blank=True, null=True, db_column="finreal")                      # Sprint 4
+    inicio_real = models.DateTimeField(blank=True, null=True, db_column="inicioreal")                
+    fin_real = models.DateTimeField(blank=True, null=True, db_column="finreal")                     
 
     class Meta:
         db_table = "sesion_clase"
@@ -42,9 +41,9 @@ class SesionClase(models.Model):
 
 class Asistencia(models.Model):
     class Estado(models.TextChoices):  # solo valida en Django, la BD acepta texto libre
-        PRESENTE = "PRESENTE", "Presente"
-        AUSENTE = "AUSENTE", "Ausente"
-        TARDANZA = "TARDANZA", "Tardanza"
+        PRESENTE = "presente", "Presente"
+        AUSENTE = "ausente", "Ausente"
+        TARDANZA = "tardanza", "Tardanza"
 
     id = models.AutoField(primary_key=True, db_column="idasistencia")
     sesion = models.ForeignKey(

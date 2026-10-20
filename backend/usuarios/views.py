@@ -1,7 +1,3 @@
-# ============================================================
-# IMPORTS
-# ============================================================
-
 # Librerías estándar de Python
 import re
 import secrets
@@ -20,18 +16,13 @@ from django.views.decorators.http import require_POST
 from rol.models import Rol
 from .models import Usuario, Estudiante, Docente
 
-
-# ============================================================
 # CONSTANTES
-# ============================================================
 
 DOMINIO = 'davinci.edu.bo'
 CRED_TTL = 15 * 60  # las credenciales pendientes caducan a los 15 minutos
 
 
-# ============================================================
 # UTILIDADES PARA GENERAR CÓDIGO Y CORREO
-# ============================================================
 
 def _inicial(texto):
     """Primera letra A-Z (sin tildes) de un texto; '' si no hay."""
@@ -41,9 +32,9 @@ def _inicial(texto):
 
 
 def generar_codigo_estudiante(nombres, ap_pat, ap_mat):
-    """Ej.: Quispe Mamani, Mariela -> QMM001. Usa solo los datos disponibles."""
     primer_nombre = (nombres or '').strip().split(' ')[0]
-    prefijo = ''.join(_inicial(x) for x in (ap_pat, ap_mat, primer_nombre))
+    # Añadimos el 'if x' para ignorar los apellidos que sean None o vacíos
+    prefijo = ''.join(_inicial(x) for x in (ap_pat, ap_mat, primer_nombre) if x)
     if not prefijo:
         return ''
     existentes = Estudiante.objects.filter(
@@ -71,18 +62,24 @@ def generar_password(n=10):
 
 
 def api_codigo_estudiante(request):
-    """Vista previa en tiempo real para el formulario (AJAX)."""
     if request.session.get('usuario_rol', '').lower() != 'administrador':
         return JsonResponse({'error': 'forbidden'}, status=403)
     codigo = generar_codigo_estudiante(
         request.GET.get('nombres'), request.GET.get('ap_pat'), request.GET.get('ap_mat'))
     return JsonResponse({'codigo': codigo, 'correo': correo_desde_codigo(codigo)})
 
+def api_correo_docente(request):
+    if request.session.get('usuario_rol', '').lower() != 'administrador':
+        return JsonResponse({'error': 'forbidden'}, status=403)
+        
+    correo = generar_correo_docente(
+        request.GET.get('nombres'), 
+        request.GET.get('ap_pat'), 
+        request.GET.get('ap_mat')
+    )
+    return JsonResponse({'correo': correo})
 
-# ============================================================
 # UTILIDADES INTERNAS
-# ============================================================
-
 def _es_admin(request):
     """Devuelve True si el usuario logueado es administrador."""
     return request.session.get('usuario_rol', '').lower() == 'administrador'
@@ -116,7 +113,6 @@ def _guardar_credenciales(request, usuario, password, titulo):
     }
 # AUTENTICACIÓN
 def login_view(request):
-    """Vista de inicio de sesión."""
     if request.method == 'POST':
         correo = request.POST.get('correo')
         password = request.POST.get('password')
@@ -129,9 +125,9 @@ def login_view(request):
         if resultado:
             # Guardamos datos en la sesión
             request.session['usuario_id'] = usuario.id_usuario
-            request.session['usuario_nombre'] = f"{usuario.nombres} {usuario.ap_pat}"
+            request.session['usuario_nombre'] = f"{usuario.nombres} {usuario.ap_pat or ''}".strip()
             request.session['usuario_rol'] = usuario.rol.nombre
-            request.session['usuario_iniciales'] = (usuario.nombres[:1] + usuario.ap_pat[:1]).upper()
+            request.session['usuario_iniciales'] = (usuario.nombres[:1] + (usuario.ap_pat[:1] if usuario.ap_pat else '')).upper()
             request.session['debe_cambiar_password'] = usuario.debe_cambiar_password
             # Si el admin lo obligó a cambiar contraseña, lo mandamos ahí primero
             if usuario.debe_cambiar_password:
@@ -158,20 +154,20 @@ def logout_view(request):
     request.session.flush()
     return redirect('login')
 
-
-# ============================================================
 # REGISTRO DE USUARIOS (solo admin)
-# ============================================================
 
 def admin_register_user(request):
-    """Vista para que el admin registre nuevos usuarios."""
     if not _es_admin(request):
         messages.error(request, 'No tienes permisos para acceder aquí')
         return redirect('login')
+        
     if request.method != 'POST':
         return _form_registro(request)
     p = request.POST
-    nombres, ap_pat, ap_mat = p.get('nombres', '').strip(), p.get('ap_pat', '').strip(), p.get('ap_mat', '').strip()
+    nombres = p.get('nombres', '').strip()
+    # Los apellidos ahora pueden venir vacíos
+    ap_pat = p.get('ap_pat', '').strip()
+    ap_mat = p.get('ap_mat', '').strip()
     ci, telefono = p.get('ci', '').strip(), p.get('telefono', '').strip()
     try:
         rol = Rol.objects.get(pk=p.get('rol'))
@@ -179,11 +175,11 @@ def admin_register_user(request):
         messages.error(request, 'Rol inválido')
         return _form_registro(request, p)
     rol_nombre = rol.nombre.lower()
-    # Validaciones de unicidad
-    if Usuario.objects.filter(ci=ci).exists():
+    # Validaciones de unicidad (solo si el campo no está vacío)
+    if ci and Usuario.objects.filter(ci=ci).exists():
         messages.error(request, 'Ya existe un usuario con ese carnet de identidad')
         return _form_registro(request, p)
-    if Usuario.objects.filter(telefono=telefono).exists():
+    if telefono and Usuario.objects.filter(telefono=telefono).exists():
         messages.error(request, 'Ya existe un usuario con ese número de teléfono')
         return _form_registro(request, p)
     # Validaciones específicas por rol
@@ -204,10 +200,8 @@ def admin_register_user(request):
                     codigo = generar_codigo_estudiante(nombres, ap_pat, ap_mat)
                     correo = correo_desde_codigo(codigo)
                 else:
-                    correo = p.get('correo', '').strip().lower()
-                    if Usuario.objects.filter(correo=correo).exists():
-                        messages.error(request, 'Ya existe un usuario con ese correo')
-                        return _form_registro(request, p)
+                    # Generamos el correo automáticamente para docentes (y otros roles)
+                    correo = generar_correo_docente(nombres, ap_pat, ap_mat)
 
                 usuario = Usuario.objects.create(
                     nombres=nombres, ap_pat=ap_pat, ap_mat=ap_mat, ci=ci,
@@ -235,9 +229,7 @@ def admin_register_user(request):
     return redirect('admin_credenciales')
 
 
-# ============================================================
 # CREDENCIALES (mostrar una sola vez)
-# ============================================================
 
 def admin_credenciales(request):
     """Muestra las credenciales del último usuario creado."""
@@ -259,15 +251,11 @@ def admin_credenciales_limpiar(request):
     request.session.pop('credenciales_nuevas', None)
     return JsonResponse({'ok': True})
 
-
-# ============================================================
 # EDITAR, ESTADO Y RESTABLECER CONTRASEÑA
-# ============================================================
-
 def admin_edit_user(request, id_usuario):
-    """Vista para editar los datos de un usuario."""
     if not _es_admin(request):
         return redirect('login')
+        
     u = get_object_or_404(Usuario.objects.select_related('rol'), id_usuario=id_usuario)
     rol_nombre = u.rol.nombre.lower()
     est = Estudiante.objects.filter(usuario=u).first() if rol_nombre == 'estudiante' else None
@@ -275,8 +263,12 @@ def admin_edit_user(request, id_usuario):
     es_propio = u.id_usuario == request.session.get('usuario_id')
 
     inicial = {
-        'nombres': u.nombres, 'ap_pat': u.ap_pat, 'ap_mat': u.ap_mat,
-        'ci': u.ci or '', 'correo': u.correo, 'telefono': u.telefono or '',
+        'nombres': u.nombres, 
+        'ap_pat': u.ap_pat or '', 
+        'ap_mat': u.ap_mat or '',
+        'ci': u.ci or '', 
+        'correo': u.correo, 
+        'telefono': u.telefono or '',
         'estado': '1' if u.estado else '0',
         'especialidad': doc.especialidad if doc and doc.especialidad else '',
         'fecha_nacimiento': est.fecha_nacimiento.isoformat() if est and est.fecha_nacimiento else '',
@@ -295,25 +287,27 @@ def admin_edit_user(request, id_usuario):
         return mostrar(inicial)
 
     p = request.POST
-    nombres, ap_pat, ap_mat = p.get('nombres', '').strip(), p.get('ap_pat', '').strip(), p.get('ap_mat', '').strip()
+    nombres = p.get('nombres', '').strip()
+    ap_pat = p.get('ap_pat', '').strip()
+    ap_mat = p.get('ap_mat', '').strip()
     ci, telefono = p.get('ci', '').strip(), p.get('telefono', '').strip()
-    correo = u.correo if rol_nombre == 'estudiante' else p.get('correo', '').strip().lower()
+    
+    # El correo NO se edita manualmente, se mantiene el que ya tiene el usuario
+    correo = u.correo 
     estado = u.estado if es_propio else (p.get('estado') == '1')
 
-    if Usuario.objects.filter(ci=ci).exclude(id_usuario=u.id_usuario).exists():
+    # Validaciones de unicidad (solo si los campos tienen contenido)
+    if ci and Usuario.objects.filter(ci=ci).exclude(id_usuario=u.id_usuario).exists():
         messages.error(request, 'Ya existe otro usuario con ese carnet de identidad')
         return mostrar(p)
-    if Usuario.objects.filter(telefono=telefono).exclude(id_usuario=u.id_usuario).exists():
+    if telefono and Usuario.objects.filter(telefono=telefono).exclude(id_usuario=u.id_usuario).exists():
         messages.error(request, 'Ya existe otro usuario con ese número de teléfono')
-        return mostrar(p)
-    if Usuario.objects.filter(correo=correo).exclude(id_usuario=u.id_usuario).exists():
-        messages.error(request, 'Ya existe otro usuario con ese correo')
         return mostrar(p)
 
     with transaction.atomic():
         u.nombres, u.ap_pat, u.ap_mat = nombres, ap_pat, ap_mat
         u.ci, u.telefono, u.correo, u.estado = ci, telefono, correo, estado
-        u.save()
+        u.save()        
         if doc:
             doc.especialidad = p.get('especialidad', '').strip()
             doc.save()
@@ -324,8 +318,9 @@ def admin_edit_user(request, id_usuario):
             est.save()
 
     if es_propio:
-        request.session['usuario_nombre'] = f'{u.nombres} {u.ap_pat}'
-        request.session['usuario_iniciales'] = (u.nombres[:1] + u.ap_pat[:1]).upper()
+        request.session['usuario_nombre'] = f'{u.nombres} {u.ap_pat or ""}'.strip()
+        request.session['usuario_iniciales'] = (u.nombres[:1] + (u.ap_pat[:1] if u.ap_pat else '')).upper()
+        
     messages.success(request, f'Datos de {nombres} actualizados correctamente.')
     return redirect('admin_dashboard')
 
@@ -356,20 +351,15 @@ def admin_reset_password(request, id_usuario):
     _guardar_credenciales(request, u, password, 'Contraseña de {nombre} restablecida correctamente.')
     return redirect('admin_credenciales')
 
-
-# ============================================================
 # CAMBIO DE CONTRASEÑA Y PERFIL
-# ============================================================
 
 def _validar_password_segura(password, usuario=None):
     """Valida que la contraseña cumpla con los requisitos mínimos."""
 
-    # ⬇️ PRIMERO: validar que no sea una contraseña común
     comunes = ['12345678', 'password', 'qwerty123', 'admin123', '123456789', 'password123']
     if password.lower() in comunes:
         return False, 'Esa contraseña es demasiado común. Elige otra.'
 
-    # ⬇️ DESPUÉS: las demás validaciones
     if len(password) < 8:
         return False, 'La contraseña debe tener al menos 8 caracteres.'
     if not re.search(r'[A-Z]', password):
@@ -389,9 +379,7 @@ def _validar_password_segura(password, usuario=None):
 
     return True, ''
 
-
 def cambiar_password(request):
-    """Vista para que el usuario cambie su contraseña."""
     u = _usuario_actual(request)
     if not u:
         return redirect('login')
@@ -433,7 +421,6 @@ SIDEBARS = {
 
 
 def perfil(request):
-    """Vista para ver el perfil del usuario logueado."""
     u = _usuario_actual(request)
     if not u:
         return redirect('login')
@@ -459,3 +446,28 @@ def perfil(request):
         'iniciales': (u.nombres[:1] + u.ap_pat[:1]).upper(),
         'extra': extra,
     })
+
+def generar_correo_docente(nombres, ap_pat, ap_mat):
+    nombres = (nombres or '').strip()
+    ap_pat = (ap_pat or '').strip()
+    ap_mat = (ap_mat or '').strip()
+    
+    # Tomamos el primer nombre
+    primer_nombre = nombres.split(' ')[0] if nombres else 'docente'
+    inicial_nombre = _inicial(primer_nombre)
+    
+    # Usamos el apellido paterno, si no hay, el materno. Si no hay ninguno, usamos el nombre.
+    apellido = ap_pat if ap_pat else (ap_mat if ap_mat else primer_nombre)
+    
+    # Armamos el correo base (ej: jperez)
+    base = f"{inicial_nombre}{apellido}".lower()
+    base = re.sub(r'[^a-z0-9]', '', base) # Limpiamos tildes o espacios
+    
+    # Aseguramos que sea único
+    correo = f"{base}@{DOMINIO}"
+    contador = 1
+    while Usuario.objects.filter(correo=correo).exists():
+        correo = f"{base}{contador}@{DOMINIO}"
+        contador += 1
+        
+    return correo

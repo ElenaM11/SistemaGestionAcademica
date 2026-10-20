@@ -3,11 +3,11 @@ from django.db import models
 from django.utils import timezone
 
 class Material(models.Model):
-    class Tipo(models.TextChoices):  # solo valida en Django, la BD acepta texto libre
-        PDF = "PDF", "PDF"
-        DOCUMENTO = "DOCUMENTO", "Documento"
-        AUDIO = "AUDIO", "Audio"
-        ENLACE = "ENLACE", "Enlace"
+    class Tipo(models.TextChoices):  # valores que envía el desplegable de la plantilla
+        PDF = "pdf", "Documento PDF"
+        AUDIO = "audio", "Audio MP3"
+        VIDEO = "video", "Video"
+        ENLACE = "enlace", "Enlace externo"
 
     id = models.AutoField(primary_key=True, db_column="idmaterial")
     paralelo = models.ForeignKey(
@@ -32,7 +32,6 @@ class Material(models.Model):
     def clean(self):
         if not self.archivo and not self.url:
             raise ValidationError("Debes adjuntar un archivo o indicar un enlace.")
-        # RNF-08: el docente solo publica en paralelos que tiene asignados
         if self.docente_id and self.paralelo_id and self.paralelo.docente_id != self.docente_id:
             raise ValidationError("El docente no está asignado a este paralelo.")
 

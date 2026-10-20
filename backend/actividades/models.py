@@ -1,18 +1,21 @@
 from datetime import timezone as dt_timezone
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.conf import settings
 from django.db import models
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 
-
 def _aware(dt):
-    if dt is not None and timezone.is_naive(dt):
+    """Las columnas son `timestamp` (sin zona): al leerlas pueden venir naive.
+    Se asumen UTC, que es como las guarda Django cuando USE_TZ=True."""
+    if dt is not None and timezone.is_naive(dt) and settings.USE_TZ:
         return timezone.make_aware(dt, dt_timezone.utc)
     return dt
 
 class Actividad(models.Model):
-    class Tipo(models.TextChoices):
-        ESCRITA = "ESCRITA", "Escrita"
-        ORAL = "ORAL", "Oral"
+    class Tipo(models.TextChoices):  # valores que envía el desplegable de la plantilla
+        ESCRITA = "escrita", "Escrita"
+        ORAL = "oral", "Oral"
+        CUESTIONARIO = "cuestionario", "Cuestionario"
 
     class Estado(models.TextChoices):
         ACTIVA = "ACTIVA", "Activa"
@@ -36,7 +39,7 @@ class Actividad(models.Model):
         max_digits=5, decimal_places=2, blank=True, null=True, db_column="puntajemaximo"
     )
     permite_entrega_tardia = models.BooleanField(default=False, db_column="permiteentregatardia")
-    usa_ia = models.BooleanField(default=False, db_column="usaia")  # lo habilita el admin en el Sprint 4
+    usa_ia = models.BooleanField(default=False, db_column="usaia")
     estado = models.CharField(max_length=30, choices=Estado.choices, default=Estado.ACTIVA)
 
     class Meta:
@@ -49,15 +52,13 @@ class Actividad(models.Model):
         if self.docente_id and self.paralelo_id and self.paralelo.docente_id != self.docente_id:
             raise ValidationError("El docente no está asignado a este paralelo.")
 
-    def acepta_entregas(self, ahora=None):
-        """True si todavía se puede entregar (plazo y entrega tardía). Lo usa B en HU-13."""
-        ahora = ahora or timezone.now()
+    def esta_vencida(self, ahora=None):
         limite = _aware(self.fecha_limite)
+        return limite is not None and (ahora or timezone.now()) > limite
+    def acepta_entregas(self, ahora=None):
         if self.estado != self.Estado.ACTIVA:
             return False
-        if limite is None or ahora <= limite:
-            return True
-        return self.permite_entrega_tardia
+        return (not self.esta_vencida(ahora)) or self.permite_entrega_tardia
 
     def __str__(self):
         return self.titulo
@@ -82,7 +83,6 @@ class Entrega(models.Model):
     fecha_entrega = models.DateTimeField(default=timezone.now, db_column="fechaentrega")
     es_tardia = models.BooleanField(default=False, db_column="estardia")
     estado = models.CharField(max_length=30, choices=Estado.choices, default=Estado.ENTREGADA)
-    # --- calificación (HU-15, la usa A) ---
     calificacion = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
     fecha_calificacion = models.DateTimeField(blank=True, null=True, db_column="fechacalificacion")
@@ -94,24 +94,16 @@ class Entrega(models.Model):
     class Meta:
         db_table = "entrega"
 
-    def clean(self):
-        # La BD no tiene UNIQUE (actividad, estudiante): se valida aquí
-        if self.actividad_id and self.estudiante_id:
-            ya = Entrega.objects.filter(
-                actividad_id=self.actividad_id, estudiante_id=self.estudiante_id
-            ).exclude(pk=self.pk)
-            if ya.exists():
-                raise ValidationError("El estudiante ya entregó esta actividad.")
-
     def calificar(self, docente, nota, observaciones=""):
-        """HU-15: registra o modifica la calificación y las observaciones."""
+        """HU-15: registra o MODIFICA la calificación y las observaciones."""
         if self.actividad.paralelo.docente_id != docente.pk:
             raise PermissionDenied("Solo el docente del paralelo puede calificar.")
         maximo = self.actividad.puntaje_maximo
         if nota < 0 or (maximo is not None and nota > maximo):
-            raise ValidationError(f"La nota debe estar entre 0 y {maximo}.")
+            rango = f"entre 0 y {maximo}" if maximo is not None else "mayor o igual a 0"
+            raise ValidationError(f"La calificación debe estar {rango}.")
         self.calificacion = nota
-        self.observaciones = observaciones
+        self.observaciones = observaciones or None
         self.estado = self.Estado.CALIFICADA
         self.fecha_calificacion = timezone.now()
         self.docente_calificador = docente

@@ -13,4 +13,5 @@ urlpatterns = [
     path('panel/usuarios/<int:id_usuario>/reset-password/', views.admin_reset_password, name='admin_reset_password'),
     path('perfil/', views.perfil, name='perfil'),
     path('cambiar-password/', views.cambiar_password, name='cambiar_password'),
+    path('api/correo-docente/', views.api_correo_docente, name='api_correo_docente'),
 ]
