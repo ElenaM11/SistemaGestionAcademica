@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}{% if paralelo %}{{ paralelo.curso.nombre }}{% else %}Actividad académica{% endif %} - Da Vinci{% endblock %}
+{% block content %}
+{% include 'components/sidebar_estudiante.html' with active_tab=active_tab %}
+<main class="main-content">
+  <nav class="top-navbar"><button class="hamburger-btn" id="hamburgerBtn"><i class="bi bi-list"></i></button><div class="user-info"><div><div class="user-name">{{ usuario.nombres }} {{ usuario.ap_pat }}</div><div class="user-role">Estudiante</div></div><div class="user-avatar">{{ usuario.nombres|first|upper }}{{ usuario.ap_pat|first|upper }}</div><a href="{% url 'logout' %}" class="btn-logout">Cerrar sesión</a></div></nav>
+  <div class="d-flex flex-column flex-lg-row" style="min-height:calc(100vh - 65px)">
+    <aside class="course-subnav p-3 border-end bg-white"><h6 class="fw-bold mb-3 px-2">Mis cursos</h6>{% for grupo in paralelos %}<a href="{% url 'estudiante_academico' %}?id_paralelo={{ grupo.pk }}" class="course-list-item {% if paralelo.pk == grupo.pk %}active{% endif %}"><div class="course-badge bg-orange">{{ grupo.curso.nivel.codigo }}</div><div class="course-info"><div class="course-name">{{ grupo.curso.nombre }} · {{ grupo.turno.nombre }}</div><small class="text-muted">{{ grupo.codigo }}</small></div></a>{% empty %}<p class="px-2 text-muted">Aún no tienes cursos inscritos.</p>{% endfor %}</aside>
+    <section class="flex-grow-1 p-3 p-lg-4">
+      {% if paralelo %}
+        <div class="purple-banner mb-4"><h2 class="mb-1">{{ paralelo.curso.nombre }}</h2><p class="mb-0">{{ paralelo.curso.idioma.nombre }} · Nivel {{ paralelo.curso.nivel.codigo }} · {{ paralelo.codigo }} · Docente: {{ paralelo.docente.usuario.nombres }} {{ paralelo.docente.usuario.ap_pat }}</p></div>
+        <nav class="nav nav-pills gap-2 mb-4 course-section-tabs" aria-label="Secciones del curso">
+          <a class="nav-link {% if vista == 'materiales' %}active{% endif %}" href="?id_paralelo={{ paralelo.pk }}&vista=materiales">Materiales</a>
+          <a class="nav-link {% if vista == 'tareas' %}active{% endif %}" href="?id_paralelo={{ paralelo.pk }}&vista=tareas">Tareas y calificaciones</a>
+          <a class="nav-link {% if vista == 'progreso' %}active{% endif %}" href="?id_paralelo={{ paralelo.pk }}&vista=progreso">Mi progreso</a>
+          <a class="nav-link {% if vista == 'asistencia' %}active{% endif %}" href="?id_paralelo={{ paralelo.pk }}&vista=asistencia">Asistencia</a>
+        </nav>
+      {% else %}
+        <div class="purple-banner mb-4"><h2 class="mb-1">Mis tareas</h2><p class="mb-0">Consulta tus actividades y calificaciones. Para ver materiales, progreso o asistencia, abre un curso.</p></div>
+      {% endif %}
+
+      {% if not paralelo and vista != 'tareas' %}
+        <div class="table-custom p-4 text-center"><i class="bi bi-book display-5 text-muted"></i><h4 class="mt-3">Selecciona un curso</h4><p class="text-muted mb-0">Elige un curso del menú lateral para consultar sus materiales, progreso y asistencia.</p></div>
+      {% elif vista == 'materiales' %}
+        <div id="resultado" class="alert alert-info">Cargando materiales del curso…</div><div class="table-custom"><div class="table-responsive"><table class="table table-custom mb-0"><thead><tr><th>Material</th><th>Tipo</th><th>Descripción</th><th>Publicado</th><th>Acceso</th></tr></thead><tbody id="filas"></tbody></table></div></div>
+      {% elif vista == 'tareas' %}
+        <div id="resultado" class="alert alert-info">Cargando tareas y calificaciones…</div><div class="table-custom"><div class="table-responsive"><table class="table table-custom mb-0"><thead><tr><th>Actividad</th><th>Fecha límite</th><th>Estado</th><th>Entrega</th><th>Calificación</th><th>Observaciones</th></tr></thead><tbody id="filas"></tbody></table></div></div>
+      {% elif vista == 'progreso' %}
+        <div id="resultado" class="alert alert-info">Cargando progreso…</div><div id="progreso" class="row g-3"></div>
+      {% elif vista == 'asistencia' %}
+        <div id="resultado" class="alert alert-info">Cargando asistencia del curso…</div><div id="resumen" class="row g-3 mb-3"></div><div class="table-custom"><div class="table-responsive"><table class="table table-custom mb-0"><thead><tr><th>Fecha</th><th>Sesión</th><th>Estado</th><th>Observación</th></tr></thead><tbody id="filas"></tbody></table></div></div>
+      {% endif %}
+    </section>
+  </div>
+</main>
+{% endblock %}
+{% block extra_js %}<script>
+document.getElementById('hamburgerBtn')?.addEventListener('click',()=>{document.getElementById('sidebar')?.classList.toggle('show');document.getElementById('sidebarOverlay')?.classList.toggle('show')});document.getElementById('sidebarOverlay')?.addEventListener('click',()=>{document.getElementById('sidebar')?.classList.remove('show');document.getElementById('sidebarOverlay')?.classList.remove('show')});
+const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function enlace(v,nombre){try{const u=new URL(v,location.origin);return ['http:','https:'].includes(u.protocol)?`<a href="${esc(u.href)}" target="_blank" rel="noopener">${nombre}</a>`:'—'}catch{return '—'}}
+async function consultar(url,seccion){let respuesta;try{respuesta=await fetch(url)}catch{throw Error(`No hay conexión con el servidor al consultar ${seccion}. Revisa la conexión con Azure.`)}if(!respuesta.ok)throw Error(`No se pudo cargar ${seccion} (HTTP ${respuesta.status}). Revisa la conexión con Azure y que estén aplicadas las migraciones pendientes del módulo.`);return respuesta.json()}
+const paraleloId='{{ paralelo.pk|default:""|escapejs }}';const filtro=paraleloId?`?id_paralelo=${encodeURIComponent(paraleloId)}`:'';const vista='{{ vista|escapejs }}';
+async function iniciar(){const aviso=document.querySelector('#resultado');try{
+ if(vista==='materiales'){
+  const d=await consultar('/api/estudiante/mis-materiales/'+filtro,'los materiales');document.querySelector('#filas').innerHTML=d.map(x=>`<tr><td>${esc(x.titulo)}</td><td>${esc(x.tipo)}</td><td>${esc(x.descripcion)}</td><td>${x.fecha_publicacion?new Date(x.fecha_publicacion).toLocaleDateString():'—'}</td><td>${x.url?enlace(x.url,'Abrir'):x.archivo?enlace(x.archivo,'Descargar'):'—'}</td></tr>`).join('')||'<tr><td colspan="5" class="text-center text-muted py-4">Todavía no hay materiales publicados para este curso.</td></tr>';
+ }else if(vista==='tareas'){
+  const d=await consultar('/api/estudiante/mis-actividades/'+filtro,'las tareas');document.querySelector('#filas').innerHTML=d.map(x=>`<tr><td><strong>${esc(x.titulo)}</strong><br><small class="text-muted">${esc(x.curso_nombre)} · ${esc(x.paralelo_codigo)}</small></td><td>${x.fecha_limite?new Date(x.fecha_limite).toLocaleString():'Sin fecha'}</td><td>${esc(x.estado_estudiante)}</td><td>${x.estado_estudiante==='PENDIENTE'?`<form class="entrega" data-id="${Number(x.id_actividad)}"><textarea class="form-control mb-1" name="contenido_texto" placeholder="Tu respuesta"></textarea><input class="form-control form-control-sm mb-1" type="file" name="archivo"><button class="btn btn-sm btn-primary-custom">Entregar</button></form>`:x.es_tardia?'Entrega tardía':x.id_entrega?'Entregada':'—'}</td><td>${x.calificacion==null?'Pendiente':esc(x.calificacion)+' / '+esc(x.puntaje_maximo)}</td><td>${esc(x.observaciones)}</td></tr>`).join('')||'<tr><td colspan="6" class="text-center text-muted py-4">No tienes tareas para mostrar.</td></tr>';
+  document.querySelectorAll('.entrega').forEach(f=>f.addEventListener('submit',async e=>{e.preventDefault();const datos=new FormData(f);const archivo=datos.get('archivo');if(!archivo||!archivo.size)datos.delete('archivo');if(!datos.get('contenido_texto')&&!datos.has('archivo')){alert('Escribe una respuesta o adjunta un archivo.');return}const r=await fetch(`/api/estudiante/actividades/${f.dataset.id}/entregar/`,{method:'POST',body:datos});if(r.ok)location.reload();else{const error=await r.json();alert(JSON.stringify(error.detail||error))}}));
+ }else if(vista==='progreso'){
+  const d=await consultar('/api/estudiante/mi-progreso/'+filtro,'el progreso');const x=d[0];document.querySelector('#progreso').innerHTML=x?[["Promedio",x.promedio==null?'Sin notas':x.promedio],["Tareas entregadas",`${x.actividades_entregadas} de ${x.actividades_totales}`],["Asistencia",x.asistencia_porcentaje==null?'Sin registros':`${x.asistencia_porcentaje}%`]].map(i=>`<div class="col-12 col-md-4"><div class="stats-card"><div class="stat-label">${i[0]}</div><div class="stat-number">${esc(i[1])}</div></div></div>`).join(''):'<div class="col-12"><div class="table-custom p-4 text-muted">Aún no hay datos suficientes para calcular el progreso.</div></div>';
+ }else if(vista==='asistencia'){
+  const d=await consultar('/api/estudiante/mi-asistencia/'+filtro,'la asistencia');document.querySelector('#resumen').innerHTML=[["Asistencia acumulada",d.porcentaje==null?'Sin registros':`${d.porcentaje}%`],["Presentes",d.presentes],["Ausencias",d.ausentes]].map(i=>`<div class="col-12 col-md-4"><div class="stats-card"><div class="stat-label">${i[0]}</div><div class="stat-number">${esc(i[1])}</div></div></div>`).join('');document.querySelector('#filas').innerHTML=d.historial.map(x=>`<tr><td>${esc(x.fecha)}</td><td>${esc(x.tema||'Sesión de clase')}</td><td>${esc(x.estado)}</td><td>${esc(x.observacion)}</td></tr>`).join('')||'<tr><td colspan="4" class="text-center text-muted py-4">Todavía no hay registros de asistencia para este curso.</td></tr>';
+ }
+ aviso?.remove();
+}catch(e){if(aviso){aviso.className='alert alert-warning';aviso.textContent=e.message}}}
+if(document.querySelector('#resultado'))iniciar();
+</script>{% endblock %}

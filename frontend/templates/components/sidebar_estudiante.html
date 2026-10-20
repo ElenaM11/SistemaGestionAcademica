@@ -25,7 +25,7 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {% if active_tab == 'tareas' %}active{% endif %}" href="#">
+            <a class="nav-link {% if active_tab == 'tareas' %}active{% endif %}" href="{% url 'estudiante_academico' %}?vista=tareas">
                 <i class="bi bi-clipboard-check"></i>
                 <span>Tareas</span>
             </a>

@@ -2,14 +2,18 @@ import re
 import unicodedata
 
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from usuarios.models import Docente, Estudiante
 
-from .models import Curso, DocenteIdioma, EstudianteParalelo, HorarioParalelo, Idioma, Nivel, Paralelo, Programa, Turno
+from .models import (
+    Actividad, Asistencia, Curso, DocenteIdioma, Entrega, EstudianteParalelo,
+    HorarioParalelo, Idioma, Material, Nivel, Paralelo, Programa,
+    SesionClase, Turno,
+)
 
 
 def _prefijo_codigo(texto):
@@ -321,3 +325,168 @@ def estudiantes_de_paralelo(paralelo_id, docente):
     return EstudianteParalelo.objects.filter(paralelo=paralelo, estado='ACTIVO').select_related(
         'estudiante__usuario'
     ).order_by('estudiante__usuario__ap_pat', 'estudiante__usuario__ap_mat', 'estudiante__usuario__nombres')
+
+
+def _inscripciones_estudiante(estudiante):
+    """Obtengo los paralelos activos en los que está inscrito el estudiante."""
+    return EstudianteParalelo.objects.filter(estudiante=estudiante, estado='ACTIVO', paralelo__estado='ACTIVO')
+
+
+def materiales_estudiante(estudiante, paralelo_id=None):
+    """Listo los materiales recientes de los paralelos activos del estudiante."""
+    materiales = Material.objects.filter(paralelo__inscripciones__in=_inscripciones_estudiante(estudiante)).select_related(
+        'paralelo', 'paralelo__curso'
+    ).order_by('-fecha_publicacion')
+    return materiales.filter(paralelo_id=paralelo_id) if paralelo_id else materiales
+
+
+def actividades_estudiante(estudiante, paralelo_id=None):
+    """Listo actividades con su estado calculado para el estudiante autenticado."""
+    resultado = []
+    ahora = timezone.now()
+    qs = Actividad.objects.filter(paralelo__inscripciones__in=_inscripciones_estudiante(estudiante), estado='ACTIVA').select_related(
+        'paralelo', 'paralelo__curso'
+    ).prefetch_related('entregas').order_by('fecha_limite', '-fecha_publicacion')
+    if paralelo_id:
+        qs = qs.filter(paralelo_id=paralelo_id)
+    for actividad in qs:
+        entrega = actividad.entregas.filter(estudiante=estudiante).first()
+        estado = 'ENTREGADA' if entrega else ('VENCIDA' if actividad.fecha_limite and actividad.fecha_limite < ahora else 'PENDIENTE')
+        resultado.append((actividad, entrega, estado))
+    return resultado
+
+
+@transaction.atomic
+def entregar_actividad(estudiante, actividad_id, contenido_texto='', archivo=None):
+    """Registro una única entrega y valido inscripción, estado y plazo."""
+    actividad = get_object_or_404(Actividad.objects.select_for_update(), pk=actividad_id, estado='ACTIVA')
+    if not _inscripciones_estudiante(estudiante).filter(paralelo=actividad.paralelo).exists():
+        from rest_framework.exceptions import PermissionDenied
+        raise PermissionDenied('No estás inscrito en el paralelo de esta actividad.')
+    if Entrega.objects.filter(actividad=actividad, estudiante=estudiante).exists():
+        raise ValidationError('Esta actividad ya tiene una entrega registrada y no admite una segunda entrega.')
+    tardia = bool(actividad.fecha_limite and timezone.now() > actividad.fecha_limite)
+    if tardia and not actividad.permite_entrega_tardia:
+        raise ValidationError('El plazo de entrega venció y esta actividad no permite entregas tardías.')
+    return Entrega.objects.create(
+        actividad=actividad, estudiante=estudiante, contenido_texto=contenido_texto,
+        archivo=archivo, es_tardia=tardia, estado='ENTREGADA',
+    )
+
+
+def resumen_progreso(estudiante, paralelo):
+    """Integro calificaciones, entregas y asistencia de un estudiante en un paralelo."""
+    entregas = Entrega.objects.filter(estudiante=estudiante, actividad__paralelo=paralelo)
+    calificadas = entregas.filter(calificacion__isnull=False)
+    notas = list(calificadas.values_list('calificacion', flat=True))
+    asistencias = Asistencia.objects.filter(estudiante=estudiante, sesion__paralelo=paralelo)
+    total_asistencia = asistencias.count()
+    presentes = asistencias.filter(estado__in=['PRESENTE', 'TARDANZA']).count()
+    return {
+        'id_paralelo': paralelo.pk, 'codigo_paralelo': paralelo.codigo, 'curso': paralelo.curso.nombre,
+        'promedio': round(sum(notas) / len(notas), 2) if notas else None,
+        'actividades_entregadas': entregas.count(),
+        'actividades_totales': Actividad.objects.filter(paralelo=paralelo, estado='ACTIVA').count(),
+        'actividades_calificadas': calificadas.count(),
+        'asistencias_presentes': presentes, 'asistencias_ausentes': asistencias.filter(estado='AUSENTE').count(),
+        'asistencia_porcentaje': round(presentes * 100 / total_asistencia, 2) if total_asistencia else None,
+    }
+
+
+def progreso_estudiantes_docente(docente, paralelo_id=None):
+    """Reutilizo el resumen de progreso para estudiantes de paralelos docentes."""
+    paralelos = Paralelo.objects.filter(docente=docente, estado='ACTIVO')
+    if paralelo_id:
+        if not paralelos.filter(pk=paralelo_id).exists():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('No tienes acceso al progreso de este paralelo.')
+        paralelos = paralelos.filter(pk=paralelo_id)
+    resultado = []
+    for inscripcion in EstudianteParalelo.objects.filter(paralelo__in=paralelos, estado='ACTIVO').select_related('estudiante__usuario', 'paralelo__curso'):
+        resultado.append({
+            'id_estudiante': inscripcion.estudiante_id,
+            'estudiante': str(inscripcion.estudiante.usuario),
+            **resumen_progreso(inscripcion.estudiante, inscripcion.paralelo),
+        })
+    return resultado
+
+
+def informacion_general_cursos(curso_id=None):
+    """Agrego estudiantes, calificaciones y asistencia por curso sin datos personales."""
+    resultado = []
+    cursos = Curso.objects.filter(paralelos__estado='ACTIVO').distinct().order_by('nombre')
+    if curso_id:
+        cursos = cursos.filter(pk=curso_id)
+    for curso in cursos:
+        paralelos = Paralelo.objects.filter(curso=curso, estado='ACTIVO')
+        inscripciones = EstudianteParalelo.objects.filter(paralelo__in=paralelos, estado='ACTIVO')
+        calificaciones = Entrega.objects.filter(actividad__paralelo__in=paralelos, calificacion__isnull=False).values_list('calificacion', flat=True)
+        notas = list(calificaciones)
+        asistencias = Asistencia.objects.filter(sesion__paralelo__in=paralelos)
+        total = asistencias.count()
+        presentes = asistencias.filter(estado__in=['PRESENTE', 'TARDANZA']).count()
+        resultado.append({
+            'id_curso': curso.pk, 'curso': curso.nombre,
+            'docentes': sorted(set(Paralelo.objects.filter(pk__in=paralelos.values('pk')).values_list('docente__usuario__nombres', flat=True))),
+            'estudiantes_activos': inscripciones.values('estudiante').distinct().count(),
+            'promedio': round(sum(notas) / len(notas), 2) if notas else None,
+            'asistencia_porcentaje': round(presentes * 100 / total, 2) if total else None,
+        })
+    return resultado
+
+
+def buscar_estudiantes_resumen(busqueda, curso_id=None):
+    """Busco el progreso académico de estudiantes para el panel administrativo."""
+    filtro = (
+        Q(estudiante__usuario__nombres__icontains=busqueda)
+        | Q(estudiante__usuario__ap_pat__icontains=busqueda)
+        | Q(estudiante__usuario__ap_mat__icontains=busqueda)
+        | Q(estudiante__usuario__correo__icontains=busqueda)
+        | Q(estudiante__codigo_estudiante__icontains=busqueda)
+    )
+    inscripciones = EstudianteParalelo.objects.filter(
+        filtro, estado='ACTIVO', paralelo__estado='ACTIVO'
+    )
+    if curso_id:
+        inscripciones = inscripciones.filter(paralelo__curso_id=curso_id)
+
+    resultados = []
+    ids_estudiantes = list(
+        inscripciones.values_list('estudiante_id', flat=True).distinct()[:100]
+    )
+    for estudiante in Estudiante.objects.filter(pk__in=ids_estudiantes).select_related('usuario'):
+        cursos_estudiante = inscripciones.filter(
+            estudiante=estudiante
+        ).values_list('paralelo__curso_id', 'paralelo__curso__nombre').distinct()
+        for id_curso, nombre_curso in cursos_estudiante:
+            inscripciones_curso = EstudianteParalelo.objects.filter(
+                estudiante=estudiante, estado='ACTIVO',
+                paralelo__estado='ACTIVO', paralelo__curso_id=id_curso,
+            )
+            if curso_id:
+                inscripciones_curso = inscripciones_curso.filter(paralelo__curso_id=curso_id)
+            paralelos = Paralelo.objects.filter(
+                pk__in=inscripciones_curso.values('paralelo_id')
+            )
+            actividades = Actividad.objects.filter(paralelo__in=paralelos, estado='ACTIVA')
+            entregas = Entrega.objects.filter(
+                estudiante=estudiante, actividad__in=actividades
+            )
+            calificadas = entregas.filter(calificacion__isnull=False)
+            asistencia = Asistencia.objects.filter(
+                estudiante=estudiante, sesion__paralelo__in=paralelos
+            )
+            total_asistencia = asistencia.count()
+            presentes = asistencia.filter(estado__in=('PRESENTE', 'TARDANZA')).count()
+            resultados.append({
+                'estudiante': str(estudiante.usuario),
+                'codigo_estudiante': estudiante.codigo_estudiante,
+                'curso': nombre_curso,
+                'paralelos': list(paralelos.values_list('codigo', flat=True)),
+                'promedio': calificadas.aggregate(promedio=Avg('calificacion'))['promedio'],
+                'entregas': entregas.count(),
+                'actividades_totales': actividades.count(),
+                'asistencia_porcentaje': round(presentes * 100 / total_asistencia, 2)
+                if total_asistencia else None,
+            })
+    return resultados

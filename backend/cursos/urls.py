@@ -5,6 +5,8 @@ from .views import (
     curso_detalle, docentes_por_idioma, estudiantes_del_curso,
     estudiantes_del_paralelo, idiomas_docente, inscripciones, mis_cursos,
     paralelo_detalle, paralelos,
+    mis_materiales, mis_actividades, entregar_actividad_api, mis_calificaciones,
+    mi_asistencia, mi_progreso, progreso_de_mis_estudiantes, resumen_academico_admin,
 )
 
 
@@ -23,4 +25,13 @@ urlpatterns = [
     path('docente/cursos/', cursos_del_docente, name='api-docente-cursos'),
     path('docente/cursos/<int:curso_id>/estudiantes/', estudiantes_del_curso, name='api-docente-estudiantes-curso'),
     path('estudiante/mis-cursos/', mis_cursos, name='api-estudiante-mis-cursos'),
+    path('estudiante/mis-materiales/', mis_materiales, name='api-estudiante-materiales'),
+    path('estudiante/mis-actividades/', mis_actividades, name='api-estudiante-actividades'),
+    path('estudiante/actividades/<int:actividad_id>/entregar/', entregar_actividad_api, name='api-estudiante-entregar'),
+    path('estudiante/mis-calificaciones/', mis_calificaciones, name='api-estudiante-calificaciones'),
+    path('estudiante/mi-asistencia/', mi_asistencia, name='api-estudiante-asistencia'),
+    path('estudiante/mi-progreso/', mi_progreso, name='api-estudiante-progreso'),
+    path('docente/mi-progreso/', progreso_de_mis_estudiantes, name='api-docente-progreso'),
+    path('docente/paralelos/<int:paralelo_id>/progreso/', progreso_de_mis_estudiantes, name='api-docente-progreso-paralelo'),
+    path('admin/resumen-academico/', resumen_academico_admin, name='api-admin-resumen-academico'),
 ]

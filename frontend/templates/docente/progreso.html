@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Progreso de estudiantes - Da Vinci{% endblock %}
+{% block content %}
+{% include 'components/sidebar_docente.html' with active_tab='progreso' %}
+<main class="main-content">
+  <nav class="top-navbar"><button class="hamburger-btn" id="hamburgerBtn"><i class="bi bi-list"></i></button><div class="user-info"><div><div class="user-name">{{ usuario.nombres }} {{ usuario.ap_pat }}</div><div class="user-role">Docente</div></div><div class="user-avatar">{{ usuario.nombres|first|upper }}{{ usuario.ap_pat|first|upper }}</div><a href="{% url 'logout' %}" class="btn-logout">Cerrar sesión</a></div></nav>
+  <div class="d-flex flex-column flex-lg-row" style="min-height:calc(100vh - 65px)">
+    <aside class="course-subnav p-3 border-end bg-white"><h6 class="fw-bold mb-3 px-2">Mis paralelos</h6><a href="{% url 'docente_progreso' %}" class="course-list-item {% if not paralelo_id %}active{% endif %}"><div class="course-badge bg-purple">Todos</div><div class="course-info"><div class="course-name">Todos mis estudiantes</div></div></a>{% for grupo in paralelos %}<a href="?id_paralelo={{ grupo.pk }}" class="course-list-item {% if paralelo_id == grupo.pk|stringformat:'s' %}active{% endif %}"><div class="course-badge bg-orange">{{ grupo.curso.nivel.codigo }}</div><div class="course-info"><div class="course-name">{{ grupo.curso.nombre }}</div><small class="text-muted">{{ grupo.codigo }} · {{ grupo.turno.nombre }}</small></div></a>{% empty %}<p class="px-2 text-muted">No tienes paralelos activos asignados.</p>{% endfor %}</aside>
+    <section class="flex-grow-1 p-3 p-lg-4"><div class="purple-banner mb-4"><h2 class="mb-1">Progreso de mis estudiantes</h2><p class="mb-0">Consulta el promedio, las entregas y la asistencia de tus paralelos.</p></div><div id="resultado" class="alert alert-info">Cargando progreso…</div><div class="table-custom"><div class="table-responsive"><table class="table table-custom mb-0"><thead><tr><th>Estudiante</th><th>Curso</th><th>Promedio</th><th>Entregas</th><th>Asistencia</th><th>Ausencias</th></tr></thead><tbody id="filas"></tbody></table></div></div></section>
+  </div>
+</main>
+{% endblock %}
+{% block extra_js %}<script>
+document.getElementById('hamburgerBtn')?.addEventListener('click',()=>{document.getElementById('sidebar')?.classList.toggle('show');document.getElementById('sidebarOverlay')?.classList.toggle('show')});
+const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const id='{{ paralelo_id|default:""|escapejs }}';const url=id?`/api/docente/paralelos/${encodeURIComponent(id)}/progreso/`:'/api/docente/mi-progreso/';
+fetch(url).then(r=>{if(!r.ok)throw Error(`No se pudo cargar el progreso (HTTP ${r.status}).`);return r.json()}).then(d=>{document.querySelector('#resultado').remove();document.querySelector('#filas').innerHTML=d.map(x=>`<tr><td>${esc(x.estudiante)}</td><td>${esc(x.curso)} · ${esc(x.codigo_paralelo)}</td><td>${esc(x.promedio)}</td><td>${x.actividades_entregadas} / ${x.actividades_totales}</td><td>${x.asistencia_porcentaje==null?'—':x.asistencia_porcentaje+'%'}</td><td>${x.asistencias_ausentes}</td></tr>`).join('')||'<tr><td colspan="6" class="text-center text-muted py-4">Todavía no hay estudiantes activos en este paralelo.</td></tr>'}).catch(e=>{const m=document.querySelector('#resultado');m.className='alert alert-warning';m.textContent=e.message});
+</script>{% endblock %}

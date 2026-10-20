@@ -24,6 +24,10 @@
     font-weight: 600;
 }
 
+.course-section-tabs .nav-link { color: var(--color-purple, #7040a2); background: #fff; border: 1px solid #e5e7ee; }
+.course-section-tabs .nav-link:hover { background: #f5f0fa; }
+.course-section-tabs .nav-link.active { color: #fff; background: var(--color-purple, #7040a2); border-color: var(--color-purple, #7040a2); }
+
 a.teacher-course-card:link,
 a.teacher-course-card:visited {
     min-height: 112px;
