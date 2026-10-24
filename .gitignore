@@ -54,3 +54,6 @@ htmlcov/
 # Base de datos (estructura / respaldos)
 /database/
 *.sql
+
+# Caché de PowerShell
+**/Microsoft/Windows/PowerShell/
