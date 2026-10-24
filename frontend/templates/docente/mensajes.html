@@ -1,0 +1,65 @@
+{% extends 'comunicacion_base.html' %}
+
+{% block title %}Mensajes - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
+{% block topbar %}{% include 'components/topbar_docente.html' %}{% endblock %}
+{% block nav %}{% include 'components/docente_nav.html' with active_rail='chat' nav_url_name='docente_mensajes' %}{% endblock %}
+{% block banner_titulo %}Mensajes{% endblock %}
+{% block banner_texto %}Responde las consultas de tus estudiantes{% endblock %}
+
+{% block contenido %}
+<div class="course-grid">
+    <section class="panel-card">
+        <h5 class="panel-title">Conversaciones</h5>
+        <div class="conv-list">
+            {% for c in conversaciones %}
+            {% with u=c.estudiante.usuario %}
+            <a class="conv-item {% if seleccionada and c.estudiante.pk == seleccionada.estudiante.pk %}is-selected{% endif %}" href="?estudiante={{ c.estudiante.pk }}"{% if seleccionada and c.estudiante.pk == seleccionada.estudiante.pk %} aria-current="true"{% endif %}>
+                <span class="avatar" aria-hidden="true">{{ u.nombres|first|upper }}{{ u.ap_pat|first|upper }}</span>
+                <span class="conv-text">
+                    <span class="conv-name">{{ u.nombres }} {{ u.ap_pat }}</span>
+                    <span class="conv-last">{{ c.ultimo_mensaje }}</span>
+                </span>
+                {% if c.nuevo %}<span class="pill pill--new">Nuevo</span>{% endif %}
+            </a>
+            {% endwith %}
+            {% empty %}
+            <div class="empty-state"><i class="bi bi-chat-square"></i>Aún no tienes conversaciones en este curso.</div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="panel-card">
+        {% if seleccionada %}
+        <div class="chat-head">
+            <strong>{{ seleccionada.estudiante.usuario.nombres }} {{ seleccionada.estudiante.usuario.ap_pat }}</strong>
+            <span class="pill">Estudiante · {{ curso.idioma.nombre }} {{ curso.nivel.codigo }}</span>
+        </div>
+        <div class="chat-scroll" role="log" aria-live="polite" aria-label="Mensajes de la conversación">
+            {% for m in seleccionada.mensajes %}
+            <div class="bubble {% if m.es_mio %}bubble--out{% else %}bubble--in{% endif %}">{{ m.texto }}</div>
+            {% empty %}
+            <p class="text-empty mb-0">Todavía no hay mensajes.</p>
+            {% endfor %}
+        </div>
+        <form class="chat-form" method="post" action="{% url 'docente_mensajes' curso.id_curso %}">
+            {% csrf_token %}
+            <input type="hidden" name="estudiante" value="{{ seleccionada.estudiante.pk }}">
+            <label class="visually-hidden" for="texto">Tu respuesta</label>
+            <input class="form-control" type="text" id="texto" name="texto" maxlength="500" required autocomplete="off" placeholder="Escribe tu respuesta">
+            <button class="btn btn-primary-custom btn-pill-lg" type="submit">Enviar</button>
+        </form>
+        {% else %}
+        <div class="empty-state"><i class="bi bi-chat-square-text"></i>Elige una conversación para leer y responder.</div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+(function () {
+    var lista = document.querySelector('.chat-scroll');
+    if (lista) { lista.scrollTop = lista.scrollHeight; }
+})();
+</script>
+{% endblock %}

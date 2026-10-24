@@ -1,0 +1,63 @@
+{% extends 'comunicacion_base.html' %}
+
+{% block title %}Clase en vivo - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
+{% block topbar %}{% include 'components/topbar_docente.html' %}{% endblock %}
+{% block nav %}{% include 'components/docente_nav.html' with active_rail='llamadas' nav_url_name='docente_clase_iniciar' %}{% endblock %}
+{% block banner_titulo %}Clase en vivo{% endblock %}
+{% block banner_texto %}{{ curso.idioma.nombre }} {{ curso.nivel.codigo }} · {{ paralelo.turno.nombre }} · {{ sesion.tema }} · <span id="cronometro" data-inicio="{{ sesion.inicio|date:'c' }}">00:00:00</span>{% endblock %}
+
+{% block contenido %}
+{% include 'components/sala_participantes.html' %}
+
+<div class="live-controls">
+    <button type="button" class="btn btn-secondary-custom btn-pill-lg" id="btnMic" data-silenciado="false"
+            data-csrf="{{ csrf_token }}" data-url="{% url 'docente_clase_microfono' curso.id_curso sesion.pk %}">Silenciar micrófono</button>
+    <button type="button" class="btn btn-secondary-custom btn-pill-lg" data-bs-toggle="offcanvas" data-bs-target="#panelParticipantes">Participantes</button>
+    <button type="button" class="btn btn-danger-custom btn-pill-lg" data-bs-toggle="modal" data-bs-target="#modalFinalizar">Finalizar sesión</button>
+</div>
+
+<div class="modal fade" id="modalFinalizar" tabindex="-1" aria-labelledby="modalFinalizarTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content p-2">
+            <form method="post" action="{% url 'docente_clase_finalizar' curso.id_curso sesion.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <h5 class="panel-title" id="modalFinalizarTitulo">¿Finalizar la sesión para todos?</h5>
+                    <p class="text-muted mb-0">Se cerrará la sala y {% if cantidad_estudiantes == 1 %}el estudiante saldrá{% else %}los {{ cantidad_estudiantes }} estudiantes saldrán{% endif %} de la clase. Podrás registrar la asistencia después.</p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary-custom btn-pill-lg" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger-custom btn-pill-lg">Finalizar sesión</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="panelParticipantes" aria-labelledby="panelParticipantesTitulo">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="panelParticipantesTitulo">Participantes ({{ total_participantes }})</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body">
+        {% for p in participantes %}
+        <div class="participant-row">
+            <div class="avatar avatar--sm" aria-hidden="true">{{ p.iniciales }}</div>
+            <div class="participant-info"><div>{{ p.nombre }}</div><small class="text-muted">{{ p.rol }}</small></div>
+            <span class="pill {% if p.hablando %}pill--ok{% endif %}">{% if p.hablando %}Hablando{% else %}Silenciado{% endif %}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+{% include 'components/sala_js.html' %}
+<script>
+(function () {
+    // Se mueve al <body> para que la barra fija no quede por encima de la ventana.
+    var modal = document.getElementById('modalFinalizar');
+    if (modal) { document.body.appendChild(modal); }
+})();
+</script>
+{% endblock %}

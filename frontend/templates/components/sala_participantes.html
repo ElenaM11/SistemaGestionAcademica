@@ -1,0 +1,19 @@
+{# Resumen y cuadrícula de participantes de la sala (docente y estudiante).
+   Contexto: participantes (nombre, iniciales, rol, hablando, es_yo), total_participantes, participantes_extra. #}
+<div class="live-summary">
+    <span class="pill pill--ok pill--lg">Audio activo</span>
+    <span class="live-count">{{ total_participantes }} participantes</span>
+</div>
+<div class="participant-grid">
+    {% for p in participantes|slice:":7" %}
+    <article class="participant-card" {% if p.es_yo %}data-self{% endif %}>
+        <div class="avatar avatar--lg" aria-hidden="true">{{ p.iniciales }}</div>
+        <div class="participant-name">{{ p.nombre }}</div>
+        <div class="participant-role">{{ p.rol }}</div>
+        <span class="pill estado-voz {% if p.hablando %}pill--ok{% endif %}">{% if p.hablando %}Hablando{% else %}Silenciado{% endif %}</span>
+    </article>
+    {% endfor %}
+    {% if participantes_extra > 0 %}
+    <article class="participant-card participant-card--more">+{{ participantes_extra }} participantes</article>
+    {% endif %}
+</div>

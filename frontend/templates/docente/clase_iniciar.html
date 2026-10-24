@@ -1,0 +1,95 @@
+{% extends 'comunicacion_base.html' %}
+{# Iniciar clase (docente). Contexto: opciones (paralelos del docente), sesiones_hoy
+   (hora, paralelo, estado: 'por_iniciar' | 'programada' | 'en_vivo' | 'finalizada'),
+   cantidad_estudiantes, error (opcional). #}
+{% block title %}Iniciar clase - Da Vinci{% endblock %}
+{% block topbar %}{% include 'components/topbar_docente.html' %}{% endblock %}
+{% block nav %}{% include 'components/docente_nav.html' with active_rail='llamadas' nav_url_name='docente_clase_iniciar' %}{% endblock %}
+{% block banner_titulo %}Iniciar clase{% endblock %}
+{% block banner_texto %}Prepara la sesión en vivo de tu curso{% endblock %}
+
+{% block contenido %}
+<div class="course-grid">
+    <section class="panel-card">
+        <h5 class="panel-title">Preparar sesión</h5>
+        {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+        <form method="post" action="{% url 'docente_clase_iniciar' curso.id_curso %}">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label" for="id_paralelo">Curso</label>
+                <select class="form-select" id="id_paralelo" name="id_paralelo" required>
+                    {% for p in opciones %}
+                    <option value="{{ p.pk }}" data-cantidad="{{ p.inscritos_activos }}" {% if p.pk == paralelo.pk %}selected{% endif %}>{{ p.curso.idioma.nombre }} {{ p.curso.nivel.codigo }} · {{ p.turno.nombre }} ({{ p.codigo }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="tema">Tema de la clase</label>
+                <input class="form-control" type="text" id="tema" name="tema" maxlength="150" required value="{{ request.POST.tema }}" placeholder="Present simple: práctica oral">
+            </div>
+            <p class="status-line" id="micEstado" role="status">Comprobando micrófono…</p>
+            <p class="status-line status-line--ok" id="alcance">{{ cantidad_estudiantes }} estudiante{{ cantidad_estudiantes|pluralize }} inscrito{{ cantidad_estudiantes|pluralize }} podrán ingresar</p>
+            <div class="form-actions">
+                <button class="btn btn-primary-custom btn-pill-lg" type="submit">Iniciar clase</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel-card">
+        <h5 class="panel-title">Sesiones de hoy</h5>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr><th scope="col">Hora</th><th scope="col">Curso</th><th scope="col">Estado</th></tr>
+                </thead>
+                <tbody>
+                    {% for s in sesiones_hoy %}
+                    <tr>
+                        <td>{{ s.hora|time:'H:i' }}</td>
+                        <td>{{ s.paralelo.curso.idioma.nombre }} {{ s.paralelo.curso.nivel.codigo }} · {{ s.paralelo.turno.nombre }}</td>
+                        <td>
+                            {% if s.estado == 'por_iniciar' %}<span class="pill pill--late">Por iniciar</span>
+                            {% elif s.estado == 'en_vivo' %}<span class="pill pill--ok">En vivo</span>
+                            {% elif s.estado == 'finalizada' %}<span class="pill">Finalizada</span>
+                            {% else %}<span class="pill">Programada</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-empty py-4">No tienes sesiones programadas para hoy.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+(function () {
+    var mic = document.getElementById('micEstado');
+    function estadoMic(ok, texto) {
+        mic.textContent = texto;
+        mic.classList.toggle('status-line--ok', ok);
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        estadoMic(false, 'Tu navegador no permite detectar el micrófono');
+    } else {
+        navigator.mediaDevices.enumerateDevices().then(function (equipos) {
+            var hay = equipos.some(function (e) { return e.kind === 'audioinput'; });
+            estadoMic(hay, hay ? 'Micrófono detectado' : 'No se detectó ningún micrófono');
+        }).catch(function () { estadoMic(false, 'No se pudo comprobar el micrófono'); });
+    }
+
+    var curso = document.getElementById('id_paralelo');
+    var alcance = document.getElementById('alcance');
+    if (curso && alcance) {
+        curso.addEventListener('change', function () {
+            var n = parseInt(curso.selectedOptions[0].dataset.cantidad, 10);
+            if (isNaN(n)) { return; }
+            alcance.textContent = n + (n === 1 ? ' estudiante inscrito podrá' : ' estudiantes inscritos podrán') + ' ingresar';
+        });
+    }
+})();
+</script>
+{% endblock %}

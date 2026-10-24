@@ -1,0 +1,39 @@
+{% extends 'comunicacion_base.html' %}
+{# Mensajes del estudiante con su docente. Contexto: docente (usuario), mensajes (texto, es_mio). #}
+{% block title %}Mensajes - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
+{% block topbar %}{% include 'components/topbar_estudiante.html' %}{% endblock %}
+{% block nav %}{% include 'components/estudiante_nav.html' with active_rail='chat' %}{% endblock %}
+{% block banner_titulo %}Mensajes{% endblock %}
+{% block banner_texto %}Conversación con tu docente{% endblock %}
+
+{% block contenido %}
+<section class="panel-card">
+    <div class="chat-head">
+        <strong>{{ docente.usuario.nombres }} {{ docente.usuario.ap_pat }}</strong>
+        <span class="pill">Docente · {{ curso.idioma.nombre }} {{ curso.nivel.codigo }}</span>
+    </div>
+    <div class="chat-scroll" role="log" aria-live="polite" aria-label="Mensajes con tu docente">
+        {% for m in mensajes %}
+        <div class="bubble {% if m.es_mio %}bubble--out{% else %}bubble--in{% endif %}">{{ m.texto }}</div>
+        {% empty %}
+        <p class="text-empty mb-0">Escribe tu primera consulta para tu docente.</p>
+        {% endfor %}
+    </div>
+    <form class="chat-form" method="post" action="{% url 'estudiante_mensajes' %}">
+        {% csrf_token %}
+        <input type="hidden" name="id_paralelo" value="{{ paralelo.pk }}">
+        <label class="visually-hidden" for="texto">Tu mensaje</label>
+        <input class="form-control" type="text" id="texto" name="texto" maxlength="500" required autocomplete="off" placeholder="Escribe tu mensaje">
+        <button class="btn btn-primary-custom btn-pill-lg" type="submit">Enviar</button>
+    </form>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script>
+(function () {
+    var lista = document.querySelector('.chat-scroll');
+    if (lista) { lista.scrollTop = lista.scrollHeight; }
+})();
+</script>
+{% endblock %}

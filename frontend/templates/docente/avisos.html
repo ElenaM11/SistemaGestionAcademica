@@ -1,0 +1,71 @@
+{% extends 'comunicacion_base.html' %}
+
+{% block title %}Avisos - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
+{% block topbar %}{% include 'components/topbar_docente.html' %}{% endblock %}
+{% block nav %}{% include 'components/docente_nav.html' with active_rail='chat' nav_url_name='docente_avisos' %}{% endblock %}
+{% block banner_titulo %}Avisos{% endblock %}
+{% block banner_texto %}Comunica novedades a tus estudiantes{% endblock %}
+
+{% block contenido %}
+<div class="course-grid">
+    <section class="panel-card">
+        <h5 class="panel-title">Nuevo aviso</h5>
+        {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+        <form method="post" action="{% url 'docente_avisos' curso.id_curso %}">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label" for="id_paralelo">Curso</label>
+                <select class="form-select" id="id_paralelo" name="id_paralelo" required>
+                    {% for p in opciones %}
+                    <option value="{{ p.pk }}" data-cantidad="{{ p.inscritos_activos }}" {% if p.pk == paralelo.pk %}selected{% endif %}>{{ p.curso.idioma.nombre }} {{ p.curso.nivel.codigo }} · {{ p.turno.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="titulo">Título</label>
+                <input class="form-control" type="text" id="titulo" name="titulo" maxlength="150" required value="{{ request.POST.titulo }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="mensaje">Mensaje</label>
+                <textarea class="form-control" id="mensaje" name="mensaje" rows="4" required placeholder="Mañana la clase será en el Aula 5.">{{ request.POST.mensaje }}</textarea>
+            </div>
+            <p class="notice-ok" id="alcance">{% if cantidad_estudiantes == 1 %}Llegará a 1 estudiante del curso.{% else %}Llegará a los {{ cantidad_estudiantes }} estudiantes del curso.{% endif %}</p>
+            <div class="form-actions">
+                <a class="btn btn-secondary-custom btn-pill-lg" href="{% url 'docente_avisos' curso.id_curso %}">Cancelar</a>
+                <button class="btn btn-primary-custom btn-pill-lg" type="submit">Enviar aviso</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel-card">
+        <h5 class="panel-title">Avisos enviados</h5>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead><tr><th scope="col">Aviso</th><th scope="col">Fecha</th></tr></thead>
+                <tbody>
+                    {% for a in avisos %}
+                    <tr><td>{{ a.titulo }}</td><td class="text-nowrap">{{ a.fecha|date:'d b' }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="2" class="text-center text-empty py-4">Aún no enviaste avisos.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+(function () {
+    var curso = document.getElementById('id_paralelo');
+    var alcance = document.getElementById('alcance');
+    if (!curso || !alcance) { return; }
+    curso.addEventListener('change', function () {
+        var n = parseInt(curso.selectedOptions[0].dataset.cantidad, 10);
+        if (isNaN(n)) { return; }
+        alcance.textContent = n === 1 ? 'Llegará a 1 estudiante del curso.' : 'Llegará a los ' + n + ' estudiantes del curso.';
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load static %}
+{# Base de las pantallas de comunicación (mensajes, avisos y clases en vivo), docente y estudiante.
+   Bloques: title, topbar, nav, banner_titulo, banner_texto, contenido, page_js
+   Contexto común: usuario, paralelos, curso, paralelo. #}
+{% block extra_css %}<link href="{% static 'css/sprint4.css' %}?v=1" rel="stylesheet">{% endblock %}
+{% block content %}
+{% block topbar %}{% endblock %}
+{% block nav %}{% endblock %}
+<main class="app-main">
+    <section class="course-banner purple-banner">
+        <h2>{% block banner_titulo %}{% endblock %}</h2>
+        <p>{% block banner_texto %}{% endblock %}</p>
+    </section>
+    {% for m in messages %}
+    <div class="alert alert-{% if m.tags == 'error' %}danger{% else %}{{ m.tags|default:'info' }}{% endif %}" role="alert">{{ m }}</div>
+    {% endfor %}
+    {% block contenido %}{% endblock %}
+</main>
+{% endblock %}
+{% block extra_js %}{% include 'components/docente_nav_js.html' %}{% block page_js %}{% endblock %}{% endblock %}

@@ -1,0 +1,73 @@
+/* Avatares */
+.avatar { width: 50px; height: 50px; border-radius: 50%; flex: 0 0 auto; display: grid; place-items: center;
+    background: var(--color-orange, #f05a28); color: #fff; font-weight: 700; }
+.avatar--lg { width: 68px; height: 68px; font-size: 1.3rem; }
+.avatar--sm { width: 40px; height: 40px; font-size: .9rem; }
+
+/* Pills y avisos de estado */
+.pill--new { background: #fff0e8; color: #c24510; }
+.status-line { margin: .35rem 0; font-size: 1.05rem; color: #c0262d; }
+.status-line--ok { color: #198754; }
+.live-count { font-size: 1.05rem; color: #111; }
+
+/* Botones */
+.btn-danger-custom { background: #b3261e; color: #fff; border: 0; }
+.btn-danger-custom:hover, .btn-danger-custom:focus-visible { background: #8f1d17; color: #fff; }
+.btn:disabled.btn-secondary-custom { color: #6b7280; background: #f4f5f9; }
+
+/* Conversaciones */
+.conv-list { display: flex; flex-direction: column; gap: .35rem; }
+.conv-item { display: flex; align-items: center; gap: 1rem; padding: .75rem .9rem; border-radius: 12px;
+    text-decoration: none; color: #111; }
+.conv-item:hover { background: #f4f5f9; }
+.conv-item:focus-visible { outline: 3px solid #f28a35; outline-offset: 2px; }
+.conv-item.is-selected { background: #fff0e8; }
+.conv-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.conv-name { font-size: 1.1rem; }
+.conv-last { color: #6b7280; font-size: .98rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Chat */
+.chat-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .75rem;
+    padding-bottom: .9rem; margin-bottom: 1rem; border-bottom: 1px solid #e5e7ee; }
+.chat-head strong { font-size: 1.1rem; }
+.chat-scroll { display: flex; flex-direction: column; gap: .75rem; max-height: 420px; overflow-y: auto; padding: .1rem; }
+.bubble { max-width: 78%; width: fit-content; padding: .8rem 1.1rem; border-radius: 18px; font-size: 1.05rem;
+    overflow-wrap: anywhere; white-space: pre-wrap; }
+.bubble--in { align-self: flex-start; background: #f4f5f9; color: #111; }
+.bubble--out { align-self: flex-end; background: var(--color-orange, #f05a28); color: #fff; }
+.chat-form { display: flex; gap: .75rem; margin-top: 1.1rem; }
+.chat-form .form-control { flex: 1; min-width: 0; border: 1px solid #e5e7ee; border-radius: 10px; padding: .85rem 1.1rem; font-size: 1.05rem; }
+.chat-form .form-control:focus { border-color: var(--color-orange, #f05a28); box-shadow: 0 0 0 .2rem rgba(240, 90, 40, .15); }
+
+/* Avisos */
+.notice-card + .notice-card { margin-top: 1rem; }
+.notice-card h5 { font-size: 1.2rem; font-weight: 700; margin: 0; }
+.notice-card p { font-size: 1.1rem; margin: .6rem 0; color: #111; }
+.notice-meta { color: #6b7280; font-size: .95rem; }
+
+/* Clases en vivo: lista del estudiante */
+.live-item { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.2rem; border: 1px solid #e5e7ee; border-radius: 12px; }
+.live-item + .live-item { margin-top: .75rem; }
+.live-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
+.live-main strong { font-size: 1.1rem; }
+.live-main small { color: #6b7280; font-size: .98rem; }
+.live-item .btn { padding: .6rem 1.6rem; }
+
+/* Sala en vivo */
+.live-summary { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.participant-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; }
+.participant-card { display: flex; flex-direction: column; align-items: center; gap: .3rem; padding: 1.4rem 1rem;
+    background: #fff; border: 1px solid #e5e7ee; border-radius: 16px; text-align: center; }
+.participant-name { font-size: 1.1rem; font-weight: 700; margin-top: .4rem; }
+.participant-role { color: #6b7280; font-size: 1rem; }
+.participant-card--more { justify-content: center; color: #6b7280; font-size: 1.1rem; }
+.live-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: .9rem; margin-top: 1.5rem; }
+.participant-row { display: flex; align-items: center; gap: .9rem; padding: .6rem 0; border-bottom: 1px solid #f0f1f5; }
+.participant-row .participant-info { flex: 1; min-width: 0; }
+
+@media (max-width: 1199.98px) { .participant-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575.98px) {
+    .participant-grid { grid-template-columns: minmax(0, 1fr); }
+    .live-item { flex-wrap: wrap; }
+    .bubble { max-width: 90%; }
+}

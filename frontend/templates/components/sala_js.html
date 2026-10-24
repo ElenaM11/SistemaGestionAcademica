@@ -1,0 +1,37 @@
+{# Cronómetro (#cronometro[data-inicio]) y botón de micrófono (#btnMic) de la sala. #}
+<script>
+(function () {
+    var crono = document.getElementById('cronometro');
+    var inicio = crono ? Date.parse(crono.dataset.inicio) : NaN;
+    function dos(n) { return String(n).padStart(2, '0'); }
+    function tick() {
+        var s = Math.max(0, Math.floor((Date.now() - inicio) / 1000));
+        crono.textContent = dos(Math.floor(s / 3600)) + ':' + dos(Math.floor(s % 3600 / 60)) + ':' + dos(s % 60);
+    }
+    if (crono && !isNaN(inicio)) { tick(); setInterval(tick, 1000); }
+
+    var btn = document.getElementById('btnMic');
+    if (!btn) { return; }
+    var propio = document.querySelector('[data-self] .estado-voz');
+    var silenciado = btn.dataset.silenciado === 'true';
+    function pintar() {
+        btn.textContent = silenciado ? 'Activar micrófono' : 'Silenciar micrófono';
+        if (propio) {
+            propio.textContent = silenciado ? 'Silenciado' : 'Hablando';
+            propio.classList.toggle('pill--ok', !silenciado);
+        }
+    }
+    btn.addEventListener('click', function () {
+        silenciado = !silenciado;
+        pintar();
+        if (btn.dataset.url) {
+            fetch(btn.dataset.url, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': btn.dataset.csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'silenciado=' + (silenciado ? '1' : '0')
+            }).catch(function () { /* el estado local se mantiene */ });
+        }
+    });
+    pintar();
+})();
+</script>
