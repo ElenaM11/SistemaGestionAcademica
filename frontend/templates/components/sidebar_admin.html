@@ -29,29 +29,38 @@
 
     {% if active_tab == 'usuarios' %}
     <aside class="subpanel">
-        <h4>Usuarios</h4>
+        <div class="subpanel-header">
+            <h4>Usuarios</h4>
+        </div>
+
         {% if active_sub == 'registrar' %}
-            <a class="sub-item active" href="{% url 'admin_register_user' %}">
-                <span class="chip c-orange">+</span> Registrar usuario
+            <a class="sub-item active" href="{% url 'admin_register_user' %}" title="Registrar usuario">
+                <span class="chip c-orange">+</span> <span class="sub-label">Registrar usuario</span>
             </a>
-            <a class="sub-item" href="{% url 'admin_dashboard' %}">
-                <span class="chip c-gray">≡</span> Todos los usuarios
+            <a class="sub-item" href="{% url 'admin_dashboard' %}" title="Todos los usuarios">
+                <span class="chip c-gray">≡</span> <span class="sub-label">Todos los usuarios</span>
             </a>
         {% else %}
-            <a class="sub-item {% if active_sub == 'todos' %}active{% endif %}" href="{% url 'admin_dashboard' %}">
-                <span class="chip c-orange">T</span> Todos
+            <a class="sub-item {% if active_sub == 'todos' %}active{% endif %}" href="{% url 'admin_dashboard' %}" title="Todos">
+                <span class="chip c-orange">T</span> <span class="sub-label">Todos</span>
             </a>
-            <a class="sub-item {% if active_sub == 'administradores' %}active{% endif %}" href="{% url 'admin_dashboard' %}?rol=administrador">
-                <span class="chip c-purple">A</span> Administradores
+            <a class="sub-item {% if active_sub == 'administradores' %}active{% endif %}" href="{% url 'admin_dashboard' %}?rol=administrador" title="Administradores">
+                <span class="chip c-purple">A</span> <span class="sub-label">Administradores</span>
             </a>
-            <a class="sub-item {% if active_sub == 'docentes' %}active{% endif %}" href="{% url 'admin_dashboard' %}?rol=docente">
-                <span class="chip c-yellow">D</span> Docentes
+            <a class="sub-item {% if active_sub == 'docentes' %}active{% endif %}" href="{% url 'admin_dashboard' %}?rol=docente" title="Docentes">
+                <span class="chip c-yellow">D</span> <span class="sub-label">Docentes</span>
             </a>
-            <a class="sub-item {% if active_sub == 'estudiantes' %}active{% endif %}" href="{% url 'admin_dashboard' %}?rol=estudiante">
-                <span class="chip c-gray">E</span> Estudiantes
+            <a class="sub-item {% if active_sub == 'estudiantes' %}active{% endif %}" href="{% url 'admin_dashboard' %}?rol=estudiante" title="Estudiantes">
+                <span class="chip c-gray">E</span> <span class="sub-label">Estudiantes</span>
             </a>
         {% endif %}
     </aside>
     {% endif %}
+
+    <!-- BOTÓN FLOTANTE (fuera del subpanel para que no desaparezca al colapsar) -->
+    <button class="btn-toggle-sidebar" id="toggleSidebar" type="button" title="Colapsar menú" aria-label="Colapsar menú" aria-controls="sidebar" aria-expanded="true">
+        <i class="bi bi-chevron-double-left"></i>
+    </button>
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
+{% include 'components/sidebar_collapse.html' %}

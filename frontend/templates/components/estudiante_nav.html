@@ -1,0 +1,57 @@
+<div class="app-nav" id="sidebar">
+    <ul class="rail">
+        <li>
+            <a class="rail-link {% if active_rail == 'actividad' %}active{% endif %}" href="#">
+                <i class="bi bi-bell"></i><span>Actividad</span>
+            </a>
+        </li>
+        <li>
+            <a class="rail-link {% if active_rail == 'chat' %}active{% endif %}" href="#">
+                <i class="bi bi-chat-square"></i><span>Chat</span>
+            </a>
+        </li>
+        <li>
+            <a class="rail-link {% if active_rail == 'cursos' %}active{% endif %}" href="{% url 'estudiante_dashboard' %}">
+                <i class="bi bi-book"></i><span>Cursos</span>
+            </a>
+        </li>
+        <li>
+            <a class="rail-link {% if active_rail == 'tareas' %}active{% endif %}" href="{% url 'estudiante_academico' %}?vista=tareas">
+                <i class="bi bi-check2-square"></i><span>Tareas</span>
+            </a>
+        </li>
+    </ul>
+
+    <aside class="subpanel course-subnav" aria-label="Mis cursos">
+        <div class="subpanel-header">
+            <h4>Mis cursos</h4>
+        </div>
+
+        {% if paralelos %}
+            {% for grupo in paralelos %}
+                <a class="sub-item {% if paralelo.pk == grupo.pk %}active{% endif %}" href="{% url 'estudiante_academico' %}?id_paralelo={{ grupo.pk }}" title="{{ grupo.curso.nombre }} · {{ grupo.turno.nombre }}">
+                    <span class="chip c-orange">{{ grupo.curso.nivel.codigo }}</span>
+                    <span class="sub-text">{{ grupo.curso.nombre }} · {{ grupo.turno.nombre }}</span>
+                </a>
+            {% empty %}
+                <p class="px-3 text-muted">Aún no tienes cursos inscritos.</p>
+            {% endfor %}
+        {% elif inscripciones %}
+            {% for grupo in inscripciones %}
+                <a class="sub-item" href="{% url 'estudiante_academico' %}?id_paralelo={{ grupo.paralelo_id }}" title="{{ grupo.paralelo.curso.nombre }} · {{ grupo.paralelo.turno.nombre }}">
+                    <span class="chip c-orange">{{ grupo.paralelo.curso.nivel.codigo }}</span>
+                    <span class="sub-text">{{ grupo.paralelo.curso.nombre }} · {{ grupo.paralelo.turno.nombre }}</span>
+                </a>
+            {% empty %}
+                <p class="px-3 text-muted">Aún no tienes cursos inscritos.</p>
+            {% endfor %}
+        {% endif %}
+    </aside>
+
+    <!-- BOTÓN FLOTANTE (fuera del subpanel para que no desaparezca al colapsar) -->
+    <button class="btn-toggle-sidebar" id="toggleSidebar" type="button" title="Colapsar menú" aria-label="Colapsar menú" aria-controls="sidebar" aria-expanded="true">
+        <i class="bi bi-chevron-double-left"></i>
+    </button>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+{% include 'components/sidebar_collapse.html' %}

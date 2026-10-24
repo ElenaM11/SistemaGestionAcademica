@@ -1,0 +1,90 @@
+{% comment %}
+  Menú colapsable compartido (docente_nav, estudiante_nav, sidebar_admin).
+  Se incluye UNA vez, justo después del <div class="app-nav">.
+
+  Estado colapsado = el riel de iconos + el subpanel reducido a sus fichas (T, A, D, E...).
+  El estado vive en <html class="sidebar-collapsed">, así se aplica al cargar aunque
+  <main class="app-main"> todavía no exista, y el contenido se recorre solo por CSS.
+{% endcomment %}
+<style>
+:root { --sub-collapsed-w: 84px; }
+
+/* Botón de la flechita */
+.btn-toggle-sidebar {
+    position: absolute !important; right: -18px !important; top: 24px !important;
+    background: #fff !important; border: 1px solid #e5e7ee !important; border-radius: 50% !important;
+    width: 36px !important; height: 36px !important; display: flex !important; align-items: center !important; justify-content: center !important;
+    z-index: 9999 !important; box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important; cursor: pointer !important;
+    color: #6b7280 !important; padding: 0 !important; transition: all 0.2s !important;
+}
+.btn-toggle-sidebar:hover { color: var(--color-orange, #ff5a00) !important; transform: scale(1.05); }
+
+/* Pantallas sin subpanel (ej. Cursos o Progreso académico del admin): no hay nada que colapsar */
+html:not(:has(.app-nav .subpanel)) .btn-toggle-sidebar { display: none !important; }
+
+@media (min-width: 992px) {
+    .app-main { transition: margin-left .2s ease; }
+    .app-nav .subpanel { transition: width .2s ease; }
+
+    /* 1) El subpanel se encoge y deja solo las fichas */
+    html.sidebar-collapsed .app-nav .subpanel {
+        width: var(--sub-collapsed-w) !important;
+        min-width: var(--sub-collapsed-w) !important;
+        max-width: var(--sub-collapsed-w) !important;
+        flex: 0 0 var(--sub-collapsed-w) !important;
+        padding-left: 0 !important; padding-right: 0 !important;
+        overflow: hidden !important;
+    }
+    /* El título se oculta pero conserva su alto: las fichas quedan a la misma altura que abierto */
+    html.sidebar-collapsed .app-nav .subpanel-header h4 { visibility: hidden; }
+    html.sidebar-collapsed .app-nav .subpanel .sub-text,
+    html.sidebar-collapsed .app-nav .subpanel .sub-label,
+    html.sidebar-collapsed .app-nav .subpanel p { display: none !important; }
+    html.sidebar-collapsed .app-nav .subpanel .sub-item {
+        justify-content: center !important; gap: 0 !important;
+        padding-left: 0 !important; padding-right: 0 !important;
+    }
+
+    /* 2) El contenido ocupa el espacio que dejó el menú (y vuelve al abrirlo) */
+    html.sidebar-collapsed:has(.app-nav .subpanel) .app-main {
+        margin-left: calc(var(--rail-w, 108px) + var(--sub-collapsed-w)) !important;
+    }
+
+    /* 3) La flecha se queda pegada al borde del menú encogido */
+    html.sidebar-collapsed .app-nav .btn-toggle-sidebar {
+        right: auto !important;
+        left: calc(var(--rail-w, 108px) + var(--sub-collapsed-w) - 18px) !important;
+    }
+}
+@media (max-width: 991.98px) { .btn-toggle-sidebar { display: none !important; } }
+</style>
+
+<script>
+(function () {
+    var CLAVE = 'sidebarCollapsed';
+    var raiz = document.documentElement;
+    var boton = document.getElementById('toggleSidebar');
+    if (!boton) { return; }
+
+    function leer() { try { return localStorage.getItem(CLAVE) === 'true'; } catch (e) { return false; } }
+    function guardar(v) { try { localStorage.setItem(CLAVE, v); } catch (e) { /* sin almacenamiento: no se recuerda */ } }
+
+    function pintar(colapsado) {
+        raiz.classList.toggle('sidebar-collapsed', colapsado);
+        boton.innerHTML = colapsado
+            ? '<i class="bi bi-chevron-double-right"></i>'
+            : '<i class="bi bi-chevron-double-left"></i>';
+        var texto = colapsado ? 'Expandir menú' : 'Colapsar menú';
+        boton.title = texto;
+        boton.setAttribute('aria-label', texto);
+        boton.setAttribute('aria-expanded', colapsado ? 'false' : 'true');
+    }
+
+    pintar(leer());
+    boton.addEventListener('click', function () {
+        var colapsado = !raiz.classList.contains('sidebar-collapsed');
+        pintar(colapsado);
+        guardar(colapsado);
+    });
+})();
+</script>

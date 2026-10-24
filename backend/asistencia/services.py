@@ -5,7 +5,6 @@ TARDANZA_CUENTA_COMO_ASISTENCIA = True
 UMBRAL_RIESGO = 75  # porcentaje
 
 def resumen_asistencia(paralelo, estudiante_ids, desde=None, hasta=None):
-    """Devuelve (total_sesiones, {estudiante_id: datos}). `desde` y `hasta` son fechas (opcionales)."""
     base = Asistencia.objects.filter(sesion__paralelo=paralelo)
     if desde:
         base = base.filter(sesion__fecha__gte=desde)

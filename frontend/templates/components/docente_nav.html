@@ -1,11 +1,3 @@
-{% comment %}
- Riel de iconos + subpanel "Mis cursos" del docente.
-   Parametros (todos opcionales):
-     active_rail   -> 'actividad' | 'chat' | 'equipos' | 'tareas' | 'llamadas'
-     nav_url_name  -> nombre de la url a la que apunta cada curso del subpanel
-                      (recibe curso_id). Por defecto: docente_estudiantes_curso.
-   Contexto: paralelos (cada item con curso_id, curso.idioma, curso.nivel, turno), curso. 
-{% endcomment %}
 <div class="app-nav" id="sidebar">
     <ul class="rail">
         <li>
@@ -36,7 +28,10 @@
     </ul>
 
     <aside class="subpanel course-subnav" aria-label="Mis cursos">
-        <h4>Mis cursos</h4>
+        <div class="subpanel-header">
+            <h4>Mis cursos</h4>
+        </div>
+
         {% with destino=nav_url_name|default:'docente_estudiantes_curso' %}
         {% for grupo in paralelos %}
             {% if grupo.curso_id == curso.id_curso %}
@@ -53,5 +48,11 @@
         {% endfor %}
         {% endwith %}
     </aside>
+
+    <!-- BOTÓN FLOTANTE (fuera del subpanel para que no desaparezca al colapsar) -->
+    <button class="btn-toggle-sidebar" id="toggleSidebar" type="button" title="Colapsar menú" aria-label="Colapsar menú" aria-controls="sidebar" aria-expanded="true">
+        <i class="bi bi-chevron-double-left"></i>
+    </button>
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
+{% include 'components/sidebar_collapse.html' %}

@@ -21,7 +21,7 @@ def docente_entregas(request, curso_id, pk):
     ctx = contexto_curso(request, curso_id)
     actividad = get_object_or_404(
         Actividad.objects.select_related("paralelo"),
-        pk=pk, paralelo__docente=request.docente, paralelo__curso_id=curso_id,  # RNF-08
+        pk=pk, paralelo__docente=request.docente, paralelo__curso_id=curso_id,  
     )
     inscripciones = list(inscripciones_activas(actividad.paralelo))
     entregas_db = {e.estudiante_id: e for e in actividad.entregas.all()}

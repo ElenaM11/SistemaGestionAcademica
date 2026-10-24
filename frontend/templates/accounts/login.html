@@ -1,6 +1,47 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Iniciar Sesion - Da Vinci Educativo{% endblock %}
+
+{% block extra_css %}
+<style>
+.login-left {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    --foto-ancho: 135%;
+    --foto-izq: -20%;
+}
+
+.login-left::before {
+    content: "";
+    position: absolute;
+    left: var(--foto-izq);
+    width: var(--foto-ancho);
+    bottom: 0;
+    aspect-ratio: 1508 / 704;
+    z-index: -2;
+    background: url("{% static 'img/fondo.jpg' %}") center / 100% 100% no-repeat;
+    filter: grayscale(1) contrast(1.15);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 30%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 30%);
+}
+.login-left::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+        to top,
+        rgba(48, 19, 75, 0.96) 0%,
+        rgba(74, 32, 112, 0.88) 25%,
+        rgba(91, 48, 132, 0.68) 50%,
+        rgba(107, 63, 160, 0.48) 75%,
+        rgba(107, 63, 160, 0.35) 100%
+    );
+}
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="login-container">

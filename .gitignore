@@ -42,3 +42,15 @@ build/
 .mypy_cache/
 .coverage
 htmlcov/
+
+# Documentos (credenciales en PDF, Word, Excel...)
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.xlsm
+
+# Base de datos (estructura / respaldos)
+/database/
+*.sql

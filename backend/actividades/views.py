@@ -49,7 +49,7 @@ def _render_lista(request, ctx, error=None):
         .order_by("-fecha_publicacion")
     )
     for a in actividades:
-        a.editable = not a.esta_vencida()  # la plantilla muestra Editar/Eliminar solo si es True
+        a.editable = not a.esta_vencida() 
     ctx.update(actividades=actividades, error=error)
     return render(request, "docente/actividad_crear.html", ctx)
 
