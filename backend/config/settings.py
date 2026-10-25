@@ -1,5 +1,3 @@
-"""Django settings for config project."""
-
 from pathlib import Path
 import os
 from dotenv import load_dotenv
@@ -18,6 +16,7 @@ ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '').split(',') if
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -34,6 +33,7 @@ INSTALLED_APPS = [
     'asistencia',
     'materiales',
     'notificaciones',
+    'comunicacion',
 ]
 
 #Agregue esto segun es importante pero aja
@@ -58,6 +58,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+
+CHANNEL_LAYERS = {'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}}
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -75,7 +78,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+#WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database (PostgreSQL en Azure)
@@ -141,3 +144,10 @@ if os.getenv('LOG_SQL', 'False') == 'True':
         'handlers': {'console': {'class': 'logging.StreamHandler'}},
         'loggers': {'django.db.backends': {'handlers': ['console'], 'level': 'DEBUG'}},
     }
+
+#livekit
+LIVEKIT_URL = os.getenv('LIVEKIT_URL', '')
+LIVEKIT_API_KEY = os.getenv('LIVEKIT_API_KEY', '')
+LIVEKIT_API_SECRET = os.getenv('LIVEKIT_API_SECRET', '')
+
+ASGI_APPLICATION = 'config.asgi.application'

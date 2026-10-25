@@ -6,6 +6,9 @@ class Notificacion(models.Model):
         MATERIAL = "MATERIAL", "Nuevo material"
         ACTIVIDAD = "ACTIVIDAD", "Nueva actividad"
         CALIFICACION = "CALIFICACION", "Calificación registrada"
+        AVISO = "AVISO", "Nuevo aviso"
+        MENSAJE = "MENSAJE", "Nuevo mensaje"
+        CLASE = "CLASE", "Clase en vivo"
         OTRO = "OTRO", "Otro"
 
     id = models.AutoField(primary_key=True, db_column="idnotificacion")
@@ -21,6 +24,11 @@ class Notificacion(models.Model):
     class Meta:
         db_table = "notificacion"
         ordering = ["-fecha"]
+
+    def marcar_leida(self):
+        if not self.leida:
+            self.leida = True
+            self.save(update_fields=["leida"])
 
     def __str__(self):
         return f"{self.usuario_id}: {self.mensaje[:40]}"

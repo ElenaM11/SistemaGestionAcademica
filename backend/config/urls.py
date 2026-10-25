@@ -16,6 +16,10 @@ urlpatterns = [
     path("panel/docente/cursos/<int:curso_id>/actividades/",include("actividades.urls")),
     path("panel/docente/cursos/<int:curso_id>/asistencia/",include("asistencia.urls")),
     path("panel/docente/cursos/<int:curso_id>/progreso/",include("actividades.urls_progreso")),
+    path("docente/", include("comunicacion.urls_docente")),
+    path("estudiante/", include("comunicacion.urls_estudiante")),
+    path("comunicacion/", include("comunicacion.urls")),
+    path("notificaciones/", include("notificaciones.urls")),
 ]
 
 if settings.DEBUG:
