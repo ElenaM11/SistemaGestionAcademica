@@ -1,6 +1,4 @@
 {% extends 'comunicacion_base.html' %}
-{# Clases en vivo del estudiante. Contexto: clases, cada una con pk, paralelo (curso, turno),
-   tema, docente (usuario), estado ('en_vivo' | 'programada'), fecha, es_hoy, hora_inicio. #}
 {% block title %}Clases en vivo - Da Vinci{% endblock %}
 {% block topbar %}{% include 'components/topbar_estudiante.html' %}{% endblock %}
 {% block nav %}{% include 'components/estudiante_nav.html' with active_rail='llamadas' %}{% endblock %}
@@ -8,17 +6,17 @@
 {% block banner_texto %}Ingresa a las sesiones de tus cursos{% endblock %}
 
 {% block contenido %}
-<section class="panel-card">
+<section class="panel-card" id="listaClases">
     {% for c in clases %}
     <div class="live-item">
         <div class="live-main">
             <strong>{{ c.paralelo.curso.idioma.nombre }} {{ c.paralelo.curso.nivel.codigo }} · {{ c.paralelo.turno.nombre }}</strong>
             <small>
-                {% if c.estado == 'en_vivo' %}{{ c.tema }}{% else %}{% if c.es_hoy %}Hoy{% else %}{{ c.fecha|date:'d b' }}{% endif %} {{ c.hora_inicio|time:'H:i' }}{% endif %}
+                {% if c.estado_vista == 'en_vivo' %}{{ c.tema }}{% else %}{% if c.es_hoy %}Hoy{% else %}{{ c.fecha|date:'d b' }}{% endif %} {{ c.hora_inicio|time:'H:i' }}{% endif %}
                 · {{ c.docente.usuario.nombres }} {{ c.docente.usuario.ap_pat }}
             </small>
         </div>
-        {% if c.estado == 'en_vivo' %}
+        {% if c.estado_vista == 'en_vivo' %}
         <span class="pill pill--ok">En vivo</span>
         <a class="btn btn-primary-custom btn-pill-lg" href="{% url 'estudiante_clase_sala' c.pk %}">Unirse</a>
         {% else %}
@@ -27,7 +25,28 @@
         {% endif %}
     </div>
     {% empty %}
-    <div class="empty-state"><i class="bi bi-telephone"></i>No hay clases en vivo por ahora. Cuando tu docente inicie una, podrás unirte desde aquí.</div>
+    <div class="empty-state"><i class="bi bi-telephone"></i>Hoy no tienes clases en vivo. Cuando tu docente inicie una, aparecerá aquí.</div>
     {% endfor %}
 </section>
+{% endblock %}
+
+{% block page_js %}
+<script>
+(function () {
+    var zona = document.getElementById('listaClases');
+    if (!zona) { return; }
+    function refrescar() {
+        if (document.hidden) { return; }
+        fetch(location.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.ok ? r.text() : null; })
+            .then(function (html) {
+                if (!html) { return; }
+                var nueva = new DOMParser().parseFromString(html, 'text/html').getElementById('listaClases');
+                if (nueva) { zona.innerHTML = nueva.innerHTML; }
+            })
+            .catch(function () { /* se reintenta en el siguiente ciclo */ });
+    }
+    setInterval(refrescar, 15000);
+})();
+</script>
 {% endblock %}

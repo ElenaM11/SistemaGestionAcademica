@@ -71,3 +71,24 @@
     .live-item { flex-wrap: wrap; }
     .bubble { max-width: 90%; }
 }
+
+/* Actividad (notificaciones) */
+.notif-list { display: flex; flex-direction: column; }
+.notif-item { display: flex; align-items: center; gap: 1rem; padding: .9rem 1rem; border-radius: 12px;
+    text-decoration: none; color: #111; }
+.notif-item + .notif-item { border-top: 1px solid #f0f1f5; border-top-left-radius: 0; border-top-right-radius: 0; }
+.notif-item:hover { background: #f4f5f9; }
+.notif-item:focus-visible { outline: 3px solid #f28a35; outline-offset: 2px; }
+.notif-item.is-unread { background: #fff8f5; }
+.notif-icon { width: 44px; height: 44px; flex: 0 0 auto; border-radius: 12px; display: grid; place-items: center;
+    background: #f1f2f6; color: #6b7280; font-size: 1.2rem; }
+.notif-item.is-unread .notif-icon { background: #fff0e8; color: #c24510; }
+.notif-body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.notif-text { font-size: 1.05rem; overflow-wrap: anywhere; }
+.notif-item.is-unread .notif-text { font-weight: 600; }
+.notif-meta { color: #6b7280; font-size: .92rem; }
+
+/* Llamadas: pantalla compartida y hablante activo */
+.screen-share { margin-bottom: 1.25rem; border-radius: 16px; overflow: hidden; background: #111; }
+.screen-share video { display: block; width: 100%; max-height: 62vh; object-fit: contain; }
+.participant-card.is-speaking { border-color: #198754; box-shadow: 0 0 0 3px rgba(25, 135, 84, .25); }

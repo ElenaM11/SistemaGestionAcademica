@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Actividad - Da Vinci{% endblock %}
+{% block extra_css %}<link href="{% static 'css/sprint4.css' %}?v=3" rel="stylesheet">{% endblock %}
+
+{% block content %}
+{% if rol == 'docente' %}
+    {% include 'components/topbar_docente.html' %}
+    {% include 'components/docente_nav.html' with active_rail='actividad' %}
+{% elif rol == 'estudiante' %}
+    {% include 'components/topbar_estudiante.html' %}
+    {% include 'components/estudiante_nav.html' with active_rail='actividad' %}
+{% else %}
+    {% include 'components/topbar.html' with user_name=request.session.usuario_nombre user_role='Administrador' initials=request.session.usuario_iniciales %}
+    {% include 'components/sidebar_admin.html' with active_tab='actividad' %}
+{% endif %}
+
+<main class="app-main{% if rol != 'docente' and rol != 'estudiante' %} no-panel{% endif %}">
+    <section class="course-banner purple-banner">
+        <h2>Actividad</h2>
+        <p>Novedades y avisos del sistema</p>
+    </section>
+    {% for m in messages %}
+    <div class="alert alert-{% if m.tags == 'error' %}danger{% else %}{{ m.tags|default:'info' }}{% endif %}" role="alert">{{ m }}</div>
+    {% endfor %}
+
+    <section class="panel-card">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+            <nav class="nav nav-pills gap-2 course-section-tabs" aria-label="Filtrar notificaciones">
+                <a class="nav-link {% if not solo_no_leidas %}active{% endif %}" href="{% url 'notificaciones' %}">Todas</a>
+                <a class="nav-link {% if solo_no_leidas %}active{% endif %}" href="{% url 'notificaciones' %}?solo=no_leidas">Sin leer{% if sin_leer %} ({{ sin_leer }}){% endif %}</a>
+            </nav>
+            {% if sin_leer %}
+            <form method="post" action="{% url 'notificaciones_leer_todas' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary-custom"><i class="bi bi-check2-all me-1" aria-hidden="true"></i> Marcar todas como leídas</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="notif-list">
+            {% for n in pagina %}
+            <a class="notif-item {% if not n.leida %}is-unread{% endif %}" href="{% url 'notificaciones_abrir' n.pk %}">
+                <span class="notif-icon" aria-hidden="true"><i class="bi {{ n.icono }}"></i></span>
+                <span class="notif-body">
+                    <span class="notif-text">{% if not n.leida %}<span class="visually-hidden">Sin leer: </span>{% endif %}{{ n.mensaje }}</span>
+                    <span class="notif-meta">{{ n.tipo_texto }} · {{ n.fecha|date:'d b, H:i' }}</span>
+                </span>
+                {% if not n.leida %}<span class="pill pill--new">Nuevo</span>{% endif %}
+            </a>
+            {% empty %}
+            <div class="empty-state">
+                <i class="bi bi-bell"></i>
+                {% if solo_no_leidas %}No tienes notificaciones sin leer.{% else %}Todavía no hay actividad para mostrar.{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if pagina.paginator.num_pages > 1 %}
+        <nav class="mt-3" aria-label="Paginación de notificaciones">
+            <ul class="pagination pagination-sm justify-content-center mb-0">
+                <li class="page-item {% if not pagina.has_previous %}disabled{% endif %}">
+                    <a class="page-link" {% if pagina.has_previous %}href="?{% if solo_no_leidas %}solo=no_leidas&{% endif %}page={{ pagina.previous_page_number }}"{% endif %}>&laquo; Anterior</a>
+                </li>
+                <li class="page-item disabled"><span class="page-link">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span></li>
+                <li class="page-item {% if not pagina.has_next %}disabled{% endif %}">
+                    <a class="page-link" {% if pagina.has_next %}href="?{% if solo_no_leidas %}solo=no_leidas&{% endif %}page={{ pagina.next_page_number }}"{% endif %}>Siguiente &raquo;</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}{% include 'components/docente_nav_js.html' %}{% endblock %}

@@ -1,7 +1,4 @@
 {% extends 'comunicacion_base.html' %}
-{# Iniciar clase (docente). Contexto: opciones (paralelos del docente), sesiones_hoy
-   (hora, paralelo, estado: 'por_iniciar' | 'programada' | 'en_vivo' | 'finalizada'),
-   cantidad_estudiantes, error (opcional). #}
 {% block title %}Iniciar clase - Da Vinci{% endblock %}
 {% block topbar %}{% include 'components/topbar_docente.html' %}{% endblock %}
 {% block nav %}{% include 'components/docente_nav.html' with active_rail='llamadas' nav_url_name='docente_clase_iniciar' %}{% endblock %}
@@ -19,7 +16,7 @@
                 <label class="form-label" for="id_paralelo">Curso</label>
                 <select class="form-select" id="id_paralelo" name="id_paralelo" required>
                     {% for p in opciones %}
-                    <option value="{{ p.pk }}" data-cantidad="{{ p.inscritos_activos }}" {% if p.pk == paralelo.pk %}selected{% endif %}>{{ p.curso.idioma.nombre }} {{ p.curso.nivel.codigo }} · {{ p.turno.nombre }} ({{ p.codigo }})</option>
+                    <option value="{{ p.pk }}" data-cantidad="{{ p.n_inscritos }}" {% if p.pk == paralelo.pk %}selected{% endif %}>{{ p.curso.idioma.nombre }} {{ p.curso.nivel.codigo }} · {{ p.turno.nombre }} ({{ p.codigo }})</option>
                     {% endfor %}
                 </select>
             </div>
@@ -48,9 +45,9 @@
                         <td>{{ s.hora|time:'H:i' }}</td>
                         <td>{{ s.paralelo.curso.idioma.nombre }} {{ s.paralelo.curso.nivel.codigo }} · {{ s.paralelo.turno.nombre }}</td>
                         <td>
-                            {% if s.estado == 'por_iniciar' %}<span class="pill pill--late">Por iniciar</span>
-                            {% elif s.estado == 'en_vivo' %}<span class="pill pill--ok">En vivo</span>
-                            {% elif s.estado == 'finalizada' %}<span class="pill">Finalizada</span>
+                            {% if s.estado_vista == 'por_iniciar' %}<span class="pill pill--late">Por iniciar</span>
+                            {% elif s.estado_vista == 'en_vivo' %}<span class="pill pill--ok">En vivo</span>
+                            {% elif s.estado_vista == 'finalizada' %}<span class="pill">Finalizada</span>
                             {% else %}<span class="pill">Programada</span>{% endif %}
                         </td>
                     </tr>

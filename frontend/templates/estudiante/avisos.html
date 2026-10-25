@@ -1,10 +1,10 @@
 {% extends 'comunicacion_base.html' %}
-{# Avisos recibidos. Contexto: avisos (titulo, texto, docente, fecha, es_hoy, nuevo). #}
 {% block title %}Avisos - Da Vinci{% endblock %}
 {% block topbar %}{% include 'components/topbar_estudiante.html' %}{% endblock %}
 {% block nav %}{% include 'components/estudiante_nav.html' with active_rail='chat' %}{% endblock %}
 {% block banner_titulo %}Avisos{% endblock %}
 {% block banner_texto %}Novedades de tus docentes{% endblock %}
+{% block tabs %}{% include 'components/comunicacion_tabs.html' with tab_activa='avisos' rol_ui='estudiante' %}{% endblock %}
 
 {% block contenido %}
 {% for a in avisos %}
@@ -13,8 +13,8 @@
         <h5>{{ a.titulo }}</h5>
         {% if a.nuevo %}<span class="pill pill--new">Nuevo</span>{% endif %}
     </div>
-    <p>{{ a.texto }}</p>
-    <div class="notice-meta">{{ a.docente.usuario.nombres }} {{ a.docente.usuario.ap_pat }} · {% if a.es_hoy %}hoy{% else %}{{ a.fecha|date:'d b' }}{% endif %}</div>
+    <p>{{ a.mensaje }}</p>
+    <div class="notice-meta">{{ a.docente.usuario.nombres }} {{ a.docente.usuario.ap_pat }} · {% if a.es_hoy %}hoy{% else %}{{ a.fecha_publicacion|date:'d b' }}{% endif %}</div>
 </article>
 {% empty %}
 <section class="panel-card"><div class="empty-state"><i class="bi bi-megaphone"></i>Tus docentes aún no publicaron avisos.</div></section>

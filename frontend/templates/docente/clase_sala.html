@@ -1,19 +1,20 @@
 {% extends 'comunicacion_base.html' %}
-
 {% block title %}Clase en vivo - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
 {% block topbar %}{% include 'components/topbar_docente.html' %}{% endblock %}
 {% block nav %}{% include 'components/docente_nav.html' with active_rail='llamadas' nav_url_name='docente_clase_iniciar' %}{% endblock %}
 {% block banner_titulo %}Clase en vivo{% endblock %}
-{% block banner_texto %}{{ curso.idioma.nombre }} {{ curso.nivel.codigo }} · {{ paralelo.turno.nombre }} · {{ sesion.tema }} · <span id="cronometro" data-inicio="{{ sesion.inicio|date:'c' }}">00:00:00</span>{% endblock %}
+{% block banner_texto %}{{ curso.idioma.nombre }} {{ curso.nivel.codigo }} · {{ paralelo.turno.nombre }} · {{ sesion.tema }} · <span id="cronometro" data-inicio="{{ sesion.inicio_real|date:'c' }}">00:00:00</span>{% endblock %}
 
 {% block contenido %}
-{% include 'components/sala_participantes.html' %}
-
-<div class="live-controls">
-    <button type="button" class="btn btn-secondary-custom btn-pill-lg" id="btnMic" data-silenciado="false"
-            data-csrf="{{ csrf_token }}" data-url="{% url 'docente_clase_microfono' curso.id_curso sesion.pk %}">Silenciar micrófono</button>
-    <button type="button" class="btn btn-secondary-custom btn-pill-lg" data-bs-toggle="offcanvas" data-bs-target="#panelParticipantes">Participantes</button>
-    <button type="button" class="btn btn-danger-custom btn-pill-lg" data-bs-toggle="modal" data-bs-target="#modalFinalizar">Finalizar sesión</button>
+<div id="sala" data-token-url="{% url 'comunicacion_token' sesion.pk %}"
+     data-fin-url="{% url 'docente_clase_iniciar' curso.id_curso %}" data-puede-compartir="true">
+    {% include 'components/sala_participantes.html' %}
+    <div class="live-controls">
+        <button type="button" class="btn btn-secondary-custom btn-pill-lg" id="btnMic" disabled>Silenciar micrófono</button>
+        <button type="button" class="btn btn-secondary-custom btn-pill-lg" id="btnPantalla" disabled>Compartir pantalla</button>
+        <button type="button" class="btn btn-secondary-custom btn-pill-lg" data-bs-toggle="offcanvas" data-bs-target="#panelParticipantes">Participantes</button>
+        <button type="button" class="btn btn-danger-custom btn-pill-lg" data-bs-toggle="modal" data-bs-target="#modalFinalizar">Finalizar sesión</button>
+    </div>
 </div>
 
 <div class="modal fade" id="modalFinalizar" tabindex="-1" aria-labelledby="modalFinalizarTitulo" aria-hidden="true">
@@ -34,20 +35,12 @@
     </div>
 </div>
 
-<div class="offcanvas offcanvas-end" tabindex="-1" id="panelParticipantes" aria-labelledby="panelParticipantesTitulo">
+<div class="offcanvas offcanvas-end" tabindex="-1" id="panelParticipantes" aria-labelledby="tituloParticipantes">
     <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="panelParticipantesTitulo">Participantes ({{ total_participantes }})</h5>
+        <h5 class="offcanvas-title" id="tituloParticipantes">Participantes</h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
     </div>
-    <div class="offcanvas-body">
-        {% for p in participantes %}
-        <div class="participant-row">
-            <div class="avatar avatar--sm" aria-hidden="true">{{ p.iniciales }}</div>
-            <div class="participant-info"><div>{{ p.nombre }}</div><small class="text-muted">{{ p.rol }}</small></div>
-            <span class="pill {% if p.hablando %}pill--ok{% endif %}">{% if p.hablando %}Hablando{% else %}Silenciado{% endif %}</span>
-        </div>
-        {% endfor %}
-    </div>
+    <div class="offcanvas-body" id="listaParticipantes"></div>
 </div>
 {% endblock %}
 

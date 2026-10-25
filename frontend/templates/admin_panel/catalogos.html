@@ -2,28 +2,107 @@
 {% block title %}Catálogos académicos - Da Vinci{% endblock %}
 {% block content %}
 {% include 'components/topbar.html' with user_name=request.session.usuario_nombre user_role='Administrador' initials=request.session.usuario_iniciales %}
-{% include 'components/sidebar_admin.html' with active_tab='cursos' %}
-<main class="main-content main-content--courses">
-    
-    <div class="d-flex flex-column flex-lg-row" style="min-height:calc(100vh - 65px)">
-    <aside class="course-subnav p-3 border-end bg-white">
-        <h5 class="fw-bold mb-3 px-2">Cursos</h5>
-        <a href="{% url 'admin_paralelos' %}" class="course-list-item"><div class="course-badge bg-orange">P</div><div class="course-info"><div class="course-name">Paralelos</div></div></a>
-        <a href="{% url 'admin_catalogo_cursos' %}" class="course-list-item"><div class="course-badge bg-purple">C</div><div class="course-info"><div class="course-name">Catálogo de cursos</div></div></a>
-        <a href="{% url 'admin_inscripciones' %}" class="course-list-item"><div class="course-badge bg-orange">I</div><div class="course-info"><div class="course-name">Inscripciones</div></div></a>
-        <a href="{% url 'admin_catalogos' %}" class="course-list-item active"><div class="course-badge bg-purple">+</div><div class="course-info"><div class="course-name">Configurar catálogos</div></div></a>
-    </aside>
-    <section class="flex-grow-1 p-3 p-lg-4">
+{% include 'components/sidebar_admin.html' with active_tab='cursos' active_sub='catalogos' %}
+<main class="app-main">
+<section>
         {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">{{ message }}<button class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
         <div class="mb-4"><h3 class="fw-bold mb-1">Configurar catálogos</h3><p class="text-muted mb-0">Agrega los idiomas, niveles, programas y turnos de tu instituto. Estos datos habilitan los formularios de cursos y paralelos.</p></div>
         <div class="row g-4">
-            <div class="col-xl-6"><div class="table-custom p-4 h-100"><h5 class="fw-bold">Idiomas</h5><form method="post" class="row g-2 mb-3">{% csrf_token %}<input type="hidden" name="tipo" value="idioma"><div class="col-md-5"><input class="form-control" name="nombre" placeholder="Nombre (ej. Inglés)" required></div><div class="col-md-4"><input class="form-control text-uppercase" name="codigo" maxlength="10" placeholder="Código (ej. ING)" required></div><div class="col-md-3"><button class="btn btn-primary-custom w-100">Agregar</button></div></form><ul class="list-group list-group-flush">{% for idioma in idiomas %}<li class="list-group-item d-flex justify-content-between"><span>{{ idioma.nombre }}</span><code>{{ idioma.codigo|default:'Sin código' }}</code></li>{% empty %}<li class="list-group-item text-muted">Agrega al menos un idioma.</li>{% endfor %}</ul></div></div>
-            <div class="col-xl-6"><div class="table-custom p-4 h-100"><h5 class="fw-bold">Niveles</h5><form method="post" class="row g-2 mb-3">{% csrf_token %}<input type="hidden" name="tipo" value="nivel"><div class="col-md-8"><input class="form-control text-uppercase" name="codigo" maxlength="20" placeholder="Código (ej. A1)" required></div><div class="col-md-4"><button class="btn btn-primary-custom w-100">Agregar</button></div></form><ul class="list-group list-group-flush">{% for nivel in niveles %}<li class="list-group-item">{{ nivel.codigo }}</li>{% empty %}<li class="list-group-item text-muted">Agrega al menos un nivel.</li>{% endfor %}</ul></div></div>
-            <div class="col-xl-6"><div class="table-custom p-4 h-100"><h5 class="fw-bold">Turnos</h5><form method="post" class="row g-2 mb-3">{% csrf_token %}<input type="hidden" name="tipo" value="turno"><div class="col-md-4"><input class="form-control" name="nombre" placeholder="Ej. Tarde" required></div><div class="col-md-3"><input class="form-control" type="time" name="hora_referencia_inicio" aria-label="Hora de inicio"></div><div class="col-md-3"><input class="form-control" type="time" name="hora_referencia_fin" aria-label="Hora de fin"></div><div class="col-md-2"><button class="btn btn-primary-custom w-100">Agregar</button></div></form><ul class="list-group list-group-flush">{% for turno in turnos %}<li class="list-group-item d-flex justify-content-between"><span>{{ turno.nombre }}</span><small class="text-muted">{{ turno.hora_referencia_inicio|time:'H:i'|default:'--:--' }}–{{ turno.hora_referencia_fin|time:'H:i'|default:'--:--' }}</small></li>{% empty %}<li class="list-group-item text-muted">Agrega al menos un turno.</li>{% endfor %}</ul></div></div>
-            <div class="col-xl-6"><div class="table-custom p-4 h-100"><h5 class="fw-bold">Programas</h5><form method="post" class="row g-2 mb-3">{% csrf_token %}<input type="hidden" name="tipo" value="programa"><div class="col-md-5"><input class="form-control" name="nombre" placeholder="Nombre del programa" required></div><div class="col-md-3"><input class="form-control" type="number" min="1" name="duracion_meses" placeholder="Meses"></div><div class="col-md-4"><button class="btn btn-primary-custom w-100">Agregar</button></div><div class="col-12"><textarea class="form-control" name="descripcion" rows="2" placeholder="Descripción (opcional)"></textarea></div></form><ul class="list-group list-group-flush">{% for programa in programas %}<li class="list-group-item d-flex justify-content-between"><span>{{ programa.nombre }}</span><small class="text-muted">{% if programa.duracion_meses %}{{ programa.duracion_meses }} meses{% else %}Duración no indicada{% endif %}</small></li>{% empty %}<li class="list-group-item text-muted">Agrega programas si los usarás en los paralelos.</li>{% endfor %}</ul></div></div>
-            <div class="col-xl-6"><div class="table-custom p-4 h-100"><h5 class="fw-bold">Idiomas que enseña cada docente</h5><p class="text-muted">Habilita al docente para que pueda recibir paralelos de ese idioma.</p><form method="post" class="row g-2 mb-3">{% csrf_token %}<input type="hidden" name="tipo" value="docente_idioma"><div class="col-md-5"><select class="form-select" name="id_docente" required><option value="">Selecciona docente</option>{% for docente in docentes %}<option value="{{ docente.pk }}">{{ docente.usuario.nombres }} {{ docente.usuario.ap_pat }}</option>{% endfor %}</select></div><div class="col-md-5"><select class="form-select" name="id_idioma" required><option value="">Selecciona idioma</option>{% for idioma in idiomas %}<option value="{{ idioma.pk }}">{{ idioma.nombre }}</option>{% endfor %}</select></div><div class="col-md-2"><button class="btn btn-primary-custom w-100">Habilitar</button></div></form>{% for docente in docentes_idiomas %}{% for relacion in docente.idiomas_docente.all %}<span class="badge bg-light text-dark border me-1 mb-1">{{ docente.usuario.nombres }} · {{ relacion.idioma.nombre }}</span>{% endfor %}{% endfor %}</div></div>
+            <div class="col-xl-6"><div class="table-custom p-4 h-100"><h5 class="fw-bold">Idiomas</h5><form method="post" class="row g-2 mb-3">{% csrf_token %}<input type="hidden" name="tipo" value="idioma"><div class="col-md-5"><input class="form-control" name="nombre" placeholder="Nombre (ej. Inglés)" required></div><div class="col-md"><input class="form-control text-uppercase" name="codigo" maxlength="10" placeholder="Código (ej. ING)" required></div><div class="col-md-auto"><button class="btn btn-primary-custom" type="submit" aria-label="Agregar idioma" title="Agregar idioma"><i class="bi bi-plus-lg" aria-hidden="true"></i></button></div></form><ul class="list-group list-group-flush">{% for idioma in idiomas %}<li class="list-group-item d-flex justify-content-between"><span>{{ idioma.nombre }}</span><code>{{ idioma.codigo|default:'Sin código' }}</code></li>{% empty %}<li class="list-group-item text-muted">Agrega al menos un idioma.</li>{% endfor %}</ul></div></div>
+            <div class="col-xl-6"><div class="table-custom p-4 h-100"><h5 class="fw-bold">Niveles</h5><form method="post" class="row g-2 mb-3">{% csrf_token %}<input type="hidden" name="tipo" value="nivel"><div class="col-md"><input class="form-control text-uppercase" name="codigo" maxlength="20" placeholder="Código (ej. A1)" required></div><div class="col-md-auto"><button class="btn btn-primary-custom" type="submit" aria-label="Agregar nivel" title="Agregar nivel"><i class="bi bi-plus-lg" aria-hidden="true"></i></button></div></form><ul class="list-group list-group-flush">{% for nivel in niveles %}<li class="list-group-item">{{ nivel.codigo }}</li>{% empty %}<li class="list-group-item text-muted">Agrega al menos un nivel.</li>{% endfor %}</ul></div></div>
+            <div class="col-xl-6"><div class="table-custom p-4 h-100"><h5 class="fw-bold">Turnos</h5><form method="post" class="row g-2 mb-3">{% csrf_token %}<input type="hidden" name="tipo" value="turno"><div class="col-md-4"><input class="form-control" name="nombre" placeholder="Ej. Tarde" required></div><div class="col-md"><input class="form-control" type="time" name="hora_referencia_inicio" aria-label="Hora de inicio"></div><div class="col-md"><input class="form-control" type="time" name="hora_referencia_fin" aria-label="Hora de fin"></div><div class="col-md-auto"><button class="btn btn-primary-custom" type="submit" aria-label="Agregar turno" title="Agregar turno"><i class="bi bi-plus-lg" aria-hidden="true"></i></button></div></form><ul class="list-group list-group-flush">{% for turno in turnos %}<li class="list-group-item d-flex justify-content-between"><span>{{ turno.nombre }}</span><small class="text-muted">{{ turno.hora_referencia_inicio|time:'H:i'|default:'--:--' }}–{{ turno.hora_referencia_fin|time:'H:i'|default:'--:--' }}</small></li>{% empty %}<li class="list-group-item text-muted">Agrega al menos un turno.</li>{% endfor %}</ul></div></div>
+            <div class="col-xl-6"><div class="table-custom p-4 h-100"><h5 class="fw-bold">Programas</h5><form method="post" class="row g-2 mb-3">{% csrf_token %}<input type="hidden" name="tipo" value="programa"><div class="col-md-5"><input class="form-control" name="nombre" placeholder="Nombre del programa" required></div><div class="col-md"><input class="form-control" type="number" min="1" name="duracion_meses" placeholder="Meses"></div><div class="col-md-auto"><button class="btn btn-primary-custom" type="submit" aria-label="Agregar programa" title="Agregar programa"><i class="bi bi-plus-lg" aria-hidden="true"></i></button></div><div class="col-12"><textarea class="form-control" name="descripcion" rows="2" placeholder="Descripción (opcional)"></textarea></div></form><ul class="list-group list-group-flush" id="listaProgramas">{% for programa in programas %}<li class="list-group-item d-flex justify-content-between" data-item><span>{{ programa.nombre }}</span><small class="text-muted">{% if programa.duracion_meses %}{{ programa.duracion_meses }} meses{% else %}Duración no indicada{% endif %}</small></li>{% empty %}<li class="list-group-item text-muted">Agrega programas si los usarás en los paralelos.</li>{% endfor %}</ul><div class="d-flex d-none justify-content-between align-items-center flex-wrap gap-2 mt-3" id="pagerProgramas"><small class="text-muted" data-info></small><ul class="pagination pagination-sm mb-0" data-paginas></ul></div></div></div>
+            <div class="col-12"><div class="table-custom p-4"><h5 class="fw-bold">Idiomas que enseña cada docente</h5><p class="text-muted">Habilita al docente para que pueda recibir paralelos de ese idioma.</p><form method="post" class="row g-2 mb-3" style="max-width:760px">{% csrf_token %}<input type="hidden" name="tipo" value="docente_idioma"><div class="col-md"><select class="form-select" name="id_docente" required><option value="">Selecciona docente</option>{% for docente in docentes %}<option value="{{ docente.pk }}">{{ docente.usuario.nombres }} {{ docente.usuario.ap_pat }}</option>{% endfor %}</select></div><div class="col-md"><select class="form-select" name="id_idioma" required><option value="">Selecciona idioma</option>{% for idioma in idiomas %}<option value="{{ idioma.pk }}">{{ idioma.nombre }}</option>{% endfor %}</select></div><div class="col-md-auto"><button class="btn btn-primary-custom" type="submit" aria-label="Habilitar docente para este idioma" title="Habilitar docente para este idioma"><i class="bi bi-person-check" aria-hidden="true"></i></button></div></form>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4 mb-2">
+    <h6 class="fw-bold mb-0">Docentes habilitados</h6>
+    <input type="search" class="form-control form-control-sm" id="buscarDocente" style="max-width:280px" placeholder="Buscar docente o idioma" aria-label="Buscar docente o idioma" autocomplete="off">
+</div>
+<div class="table-responsive">
+<table class="table align-middle mb-0" id="tablaDocentes">
+    <thead><tr><th>Docente</th><th>Correo</th><th>Idiomas</th></tr></thead>
+    <tbody>
+    {% for docente in docentes_idiomas %}
+    <tr data-item>
+        <td class="fw-semibold">{{ docente.usuario.nombres }} {{ docente.usuario.ap_pat }} {{ docente.usuario.ap_mat }}</td>
+        <td class="text-muted">{{ docente.usuario.correo }}</td>
+        <td><div class="d-flex flex-wrap gap-1">{% for relacion in docente.idiomas_docente.all %}<span class="badge rounded-pill bg-light text-dark border fw-normal" style="font-size:.85rem"><i class="bi bi-translate me-1" aria-hidden="true"></i>{{ relacion.idioma.nombre }}</span>{% empty %}<span class="text-muted small">Sin idiomas habilitados</span>{% endfor %}</div></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3" class="text-center text-muted py-4">Todavía no hay docentes habilitados para ningún idioma.</td></tr>
+    {% endfor %}
+    <tr class="d-none" id="sinDocentes"><td colspan="3" class="text-center text-muted py-4">No se encontraron docentes con ese criterio.</td></tr>
+    </tbody>
+</table>
+</div>
+<div class="d-flex d-none justify-content-between align-items-center flex-wrap gap-2 mt-3" id="pagerDocentes">
+    <small class="text-muted" data-info></small>
+    <ul class="pagination pagination-sm mb-0" data-paginas></ul>
+</div>
+</div></div>
         </div>
-    </section></div>
+    </section>
 </main>
 {% endblock %}
-{% block extra_js %}<script>document.getElementById('hamburgerBtn')?.addEventListener('click',()=>{document.getElementById('sidebar')?.classList.toggle('show');document.getElementById('sidebarOverlay')?.classList.toggle('show')});</script>{% endblock %}
+{% block extra_js %}<script>document.getElementById('hamburgerBtn')?.addEventListener('click',()=>{document.getElementById('sidebar')?.classList.toggle('show');document.getElementById('sidebarOverlay')?.classList.toggle('show')});
+(function () {
+    function plano(t) { return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+
+    function paginador(cfg) {
+        var cont = document.getElementById(cfg.contenedor), pager = document.getElementById(cfg.pager);
+        if (!cont || !pager) { return null; }
+        var items = Array.prototype.slice.call(cont.querySelectorAll('[data-item]'));
+        var vacio = cfg.vacio ? document.getElementById(cfg.vacio) : null;
+        var info = pager.querySelector('[data-info]'), paginas = pager.querySelector('[data-paginas]');
+        var filtrados = items, actual = 1;
+
+        function boton(texto, destino, desactivado, activo, etiqueta) {
+            var li = document.createElement('li');
+            li.className = 'page-item' + (desactivado ? ' disabled' : '') + (activo ? ' active' : '');
+            var b = document.createElement('button');
+            b.type = 'button'; b.className = 'page-link'; b.textContent = texto; b.disabled = desactivado;
+            if (etiqueta) { b.setAttribute('aria-label', etiqueta); }
+            if (activo) { b.setAttribute('aria-current', 'page'); }
+            b.addEventListener('click', function () { actual = destino; render(); });
+            li.appendChild(b);
+            return li;
+        }
+        function puntos() {
+            var li = document.createElement('li');
+            li.className = 'page-item disabled';
+            li.innerHTML = '<span class="page-link">…</span>';
+            return li;
+        }
+        function render() {
+            var total = filtrados.length, n = Math.max(1, Math.ceil(total / cfg.por));
+            actual = Math.min(Math.max(actual, 1), n);
+            var ini = (actual - 1) * cfg.por, fin = ini + cfg.por;
+            items.forEach(function (el) { el.classList.add('d-none'); });
+            filtrados.slice(ini, fin).forEach(function (el) { el.classList.remove('d-none'); });
+            if (vacio) { vacio.classList.toggle('d-none', !(items.length && !total)); }
+            pager.classList.toggle('d-none', n <= 1);
+            info.textContent = total ? 'Mostrando ' + (ini + 1) + '–' + Math.min(fin, total) + ' de ' + total : '';
+            paginas.textContent = '';
+            paginas.appendChild(boton('«', actual - 1, actual === 1, false, 'Anterior'));
+            for (var p = 1; p <= n; p++) {
+                if (p === 1 || p === n || Math.abs(p - actual) <= 1) { paginas.appendChild(boton(String(p), p, false, p === actual)); }
+                else if ((p === 2 && actual > 3) || (p === n - 1 && actual < n - 2)) { paginas.appendChild(puntos()); }
+            }
+            paginas.appendChild(boton('»', actual + 1, actual === n, false, 'Siguiente'));
+        }
+        render();
+        return {
+            filtrar: function (texto) {
+                var q = plano(texto.trim());
+                filtrados = q ? items.filter(function (el) { return plano(el.textContent).indexOf(q) !== -1; }) : items;
+                actual = 1;
+                render();
+            }
+        };
+    }
+
+    var docentes = paginador({ contenedor: 'tablaDocentes', pager: 'pagerDocentes', por: 10, vacio: 'sinDocentes' });
+    var buscador = document.getElementById('buscarDocente');
+    if (docentes && buscador) { buscador.addEventListener('input', function () { docentes.filtrar(buscador.value); }); }
+    paginador({ contenedor: 'listaProgramas', pager: 'pagerProgramas', por: 5 });
+})();
+</script>{% endblock %}

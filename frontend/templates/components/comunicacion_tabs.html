@@ -1,0 +1,9 @@
+<nav class="course-tabs" aria-label="Secciones de comunicación" style="overflow-y: hidden;">
+{% if rol_ui == 'docente' %}
+    <a class="course-tab {% if tab_activa == 'mensajes' %}is-active{% endif %}" href="{% url 'docente_mensajes' curso.id_curso %}"{% if tab_activa == 'mensajes' %} aria-current="page"{% endif %}>Mensajes</a>
+    <a class="course-tab {% if tab_activa == 'avisos' %}is-active{% endif %}" href="{% url 'docente_avisos' curso.id_curso %}"{% if tab_activa == 'avisos' %} aria-current="page"{% endif %}>Avisos</a>
+{% else %}
+    <a class="course-tab {% if tab_activa == 'mensajes' %}is-active{% endif %}" href="{% url 'estudiante_mensajes' %}"{% if tab_activa == 'mensajes' %} aria-current="page"{% endif %}>Mensajes</a>
+    <a class="course-tab {% if tab_activa == 'avisos' %}is-active{% endif %}" href="{% url 'estudiante_avisos' %}"{% if tab_activa == 'avisos' %} aria-current="page"{% endif %}>Avisos</a>
+{% endif %}
+</nav>

@@ -2,17 +2,9 @@
 {% block title %}Asignar docente - Da Vinci{% endblock %}
 {% block content %}
 {% include 'components/topbar.html' with user_name=request.session.usuario_nombre user_role='Administrador' initials=request.session.usuario_iniciales %}
-{% include 'components/sidebar_admin.html' with active_tab='cursos' %}
-<main class="main-content main-content--courses">
-    <div class="d-flex flex-column flex-lg-row min-vh-100">
-        <aside class="course-subnav p-3 border-end bg-white">
-            <h5 class="fw-bold mb-3 px-2">Cursos</h5>
-            <a href="{% url 'admin_paralelos' %}" class="course-list-item active"><div class="course-badge bg-orange">P</div><div class="course-info"><div class="course-name">Paralelos</div></div></a>
-            <a href="{% url 'admin_catalogo_cursos' %}" class="course-list-item"><div class="course-badge bg-purple">C</div><div class="course-info"><div class="course-name">Catálogo de cursos</div></div></a>
-            <a href="{% url 'admin_inscripciones' %}" class="course-list-item"><div class="course-badge bg-orange">I</div><div class="course-info"><div class="course-name">Inscripciones</div></div></a>
-            <a href="{% url 'admin_catalogos' %}" class="course-list-item"><div class="course-badge bg-purple">+</div><div class="course-info"><div class="course-name">Configurar catálogos</div></div></a>
-        </aside>
-        <section class="flex-grow-1 p-3 p-lg-4">
+{% include 'components/sidebar_admin.html' with active_tab='cursos' active_sub='paralelos' %}
+<main class="app-main">
+<section>
             {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">{{ message }}<button class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
             <div class="mb-4"><h3 class="fw-bold mb-1">Asignar docente</h3><p class="text-muted mb-1">{{ paralelo.codigo }} · {{ paralelo.curso.nombre }} · {{ paralelo.turno.nombre }}</p><p class="text-muted mb-0">{{ paralelo.curso.idioma.nombre }} · {% for horario in horarios %}{{ horario.dia_semana }} {{ horario.hora_inicio|time:'H:i' }}–{{ horario.hora_fin|time:'H:i' }}{% if not forloop.last %}; {% endif %}{% endfor %}</p></div>
             <div class="row g-4 align-items-start">
@@ -25,7 +17,6 @@
                 <div class="col-12 col-xl-5"><div class="table-custom p-4"><h5 class="fw-bold mb-3">Paralelos de {% if docente_seleccionado_obj %}{{ docente_seleccionado_obj.usuario.nombres }}{% else %}este docente{% endif %}</h5>{% for asignado in paralelos_docente %}<div class="border-bottom py-2"><div class="fw-semibold">{{ asignado.curso.nombre }} · {{ asignado.turno.nombre }}</div><small class="text-muted">{{ asignado.codigo }}</small></div>{% empty %}<p class="text-muted mb-0">No tiene otros paralelos asignados.</p>{% endfor %}</div></div>
             </div>
         </section>
-    </div>
 </main>
 {% endblock %}
 {% block extra_js %}<script>

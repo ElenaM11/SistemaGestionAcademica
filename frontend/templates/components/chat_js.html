@@ -1,0 +1,45 @@
+<script>
+(function () {
+    var cont = document.getElementById('chat');
+    if (!cont) { return; }
+    var lista = cont.querySelector('.chat-scroll'), form = cont.querySelector('.chat-form');
+    var entrada = form.querySelector('input[name="texto"]');
+    var yo = parseInt(cont.dataset.yo, 10);
+    var protocolo = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    var ws = null, abierto = false, intentos = 0;
+
+    lista.scrollTop = lista.scrollHeight;
+
+    function pintar(m) {
+        var vacio = lista.querySelector('.text-empty');
+        if (vacio) { vacio.remove(); }
+        var burbuja = document.createElement('div');
+        burbuja.className = 'bubble ' + (m.emisor_id === yo ? 'bubble--out' : 'bubble--in');
+        burbuja.textContent = m.texto;
+        lista.appendChild(burbuja);
+        lista.scrollTop = lista.scrollHeight;
+    }
+    function conectar() {
+        ws = new WebSocket(protocolo + location.host + cont.dataset.ws);
+        ws.onopen = function () { abierto = true; intentos = 0; };
+        ws.onmessage = function (e) {
+            var d = JSON.parse(e.data);
+            if (d.error) { alert(d.error); } else { pintar(d); }
+        };
+        ws.onclose = function () {
+            abierto = false;
+            if (intentos++ < 5) { setTimeout(conectar, 2000 * intentos); }
+        };
+    }
+    conectar();
+
+    form.addEventListener('submit', function (e) {
+        if (!abierto) { return; }  // sin conexión en vivo: envío normal
+        e.preventDefault();
+        var texto = entrada.value.trim();
+        if (!texto) { return; }
+        ws.send(JSON.stringify({ texto: texto }));
+        entrada.value = '';
+    });
+})();
+</script>

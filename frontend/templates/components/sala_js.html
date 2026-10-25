@@ -1,8 +1,31 @@
-{# Cronómetro (#cronometro[data-inicio]) y botón de micrófono (#btnMic) de la sala. #}
+{# Sala en vivo con LiveKit (WebRTC) para docente y estudiante.
+   Requiere #sala con: data-token-url, data-fin-url, data-puede-compartir ("true"/"false"),
+   y solo para el estudiante: data-salir-url y data-csrf.
+   Verifica en npm que esta versión de livekit-client exista antes de desplegar. #}
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.9.1/dist/livekit-client.umd.min.js"></script>
 <script>
 (function () {
-    var crono = document.getElementById('cronometro');
-    var inicio = crono ? Date.parse(crono.dataset.inicio) : NaN;
+    var sala = document.getElementById('sala');
+    if (!sala) { return; }
+    var $ = function (id) { return document.getElementById(id); };
+    var MAX = 7;
+    var estado = $('estadoAudio'), contador = $('contadorParticipantes'), grilla = $('grillaParticipantes');
+    var panel = $('listaParticipantes'), tituloPanel = $('tituloParticipantes'), audios = $('audios');
+    var pantalla = $('pantallaCompartida'), aviso = $('avisoSala');
+    var btnMic = $('btnMic'), btnPantalla = $('btnPantalla'), btnAudio = $('btnAudio');
+    var puedeCompartir = sala.dataset.puedeCompartir === 'true';
+    var room = null, saliendo = false;
+
+    function mostrarAviso(texto) { aviso.textContent = texto; aviso.classList.remove('d-none'); }
+    function el(tag, clase, texto) {
+        var e = document.createElement(tag);
+        if (clase) { e.className = clase; }
+        if (texto !== undefined) { e.textContent = texto; }
+        return e;
+    }
+
+    // --- Cronómetro de la clase (en el banner)
+    var crono = $('cronometro'), inicio = crono ? Date.parse(crono.dataset.inicio) : NaN;
     function dos(n) { return String(n).padStart(2, '0'); }
     function tick() {
         var s = Math.max(0, Math.floor((Date.now() - inicio) / 1000));
@@ -10,28 +33,136 @@
     }
     if (crono && !isNaN(inicio)) { tick(); setInterval(tick, 1000); }
 
-    var btn = document.getElementById('btnMic');
-    if (!btn) { return; }
-    var propio = document.querySelector('[data-self] .estado-voz');
-    var silenciado = btn.dataset.silenciado === 'true';
-    function pintar() {
-        btn.textContent = silenciado ? 'Activar micrófono' : 'Silenciar micrófono';
-        if (propio) {
-            propio.textContent = silenciado ? 'Silenciado' : 'Hablando';
-            propio.classList.toggle('pill--ok', !silenciado);
-        }
+    if (!window.LivekitClient) {
+        mostrarAviso('No se pudo cargar el componente de llamadas. Revisa tu conexión.');
+        estado.textContent = 'Sin conexión';
+        return;
     }
-    btn.addEventListener('click', function () {
-        silenciado = !silenciado;
-        pintar();
-        if (btn.dataset.url) {
-            fetch(btn.dataset.url, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': btn.dataset.csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'silenciado=' + (silenciado ? '1' : '0')
-            }).catch(function () { /* el estado local se mantiene */ });
+    var LK = window.LivekitClient;
+
+    // --- Participantes
+    function iniciales(nombre) {
+        var t = nombre.trim().split(/\s+/);
+        return ((t[0] || '')[0] || '').toUpperCase() + ((t[1] || '')[0] || '').toUpperCase();
+    }
+    function rolDe(p) { try { return JSON.parse(p.metadata || '{}').rol || 'Estudiante'; } catch (e) { return 'Estudiante'; } }
+    function vozDe(p) {
+        if (!p.isMicrophoneEnabled) { return ['Silenciado', '']; }
+        return p.isSpeaking ? ['Hablando', 'pill--ok'] : ['Micrófono activo', ''];
+    }
+    function todos() {
+        var lista = [room.localParticipant];
+        room.remoteParticipants.forEach(function (p) { lista.push(p); });
+        return lista.sort(function (a, b) { return (rolDe(a) === 'Docente' ? 0 : 1) - (rolDe(b) === 'Docente' ? 0 : 1); });
+    }
+    function tarjeta(p) {
+        var nombre = p.name || p.identity, voz = vozDe(p);
+        var t = el('article', 'participant-card' + (p.isSpeaking ? ' is-speaking' : ''));
+        var av = el('div', 'avatar avatar--lg', iniciales(nombre)); av.setAttribute('aria-hidden', 'true');
+        t.appendChild(av);
+        t.appendChild(el('div', 'participant-name', nombre + (p === room.localParticipant ? ' (tú)' : '')));
+        t.appendChild(el('div', 'participant-role', rolDe(p)));
+        t.appendChild(el('span', 'pill ' + voz[1], voz[0]));
+        return t;
+    }
+    function fila(p) {
+        var nombre = p.name || p.identity, voz = vozDe(p);
+        var f = el('div', 'participant-row');
+        var av = el('div', 'avatar avatar--sm', iniciales(nombre)); av.setAttribute('aria-hidden', 'true');
+        var info = el('div', 'participant-info');
+        info.appendChild(el('div', '', nombre));
+        info.appendChild(el('small', 'text-muted', rolDe(p)));
+        f.appendChild(av); f.appendChild(info); f.appendChild(el('span', 'pill ' + voz[1], voz[0]));
+        return f;
+    }
+    function etiquetas() {
+        var lp = room.localParticipant;
+        if (btnMic) { btnMic.textContent = lp.isMicrophoneEnabled ? 'Silenciar micrófono' : 'Activar micrófono'; }
+        if (btnPantalla) { btnPantalla.textContent = lp.isScreenShareEnabled ? 'Dejar de compartir' : 'Compartir pantalla'; }
+    }
+    function pintar() {
+        if (!room) { return; }
+        var lista = todos();
+        contador.textContent = lista.length + (lista.length === 1 ? ' participante' : ' participantes');
+        grilla.textContent = '';
+        lista.slice(0, MAX).forEach(function (p) { grilla.appendChild(tarjeta(p)); });
+        if (lista.length > MAX) { grilla.appendChild(el('article', 'participant-card participant-card--more', '+' + (lista.length - MAX) + ' participantes')); }
+        if (panel) { panel.textContent = ''; lista.forEach(function (p) { panel.appendChild(fila(p)); }); }
+        if (tituloPanel) { tituloPanel.textContent = 'Participantes (' + lista.length + ')'; }
+        etiquetas();
+    }
+
+    // --- Conexión
+    fetch(sala.dataset.tokenUrl, { credentials: 'same-origin' })
+        .then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (d) {
+                if (!r.ok) { throw new Error(d.detalle || 'No se pudo entrar a la clase.'); }
+                return d;
+            });
+        })
+        .then(function (d) {
+            room = new LK.Room({ adaptiveStream: true, dynacast: true });
+            ['ParticipantConnected', 'ParticipantDisconnected', 'TrackMuted', 'TrackUnmuted', 'ActiveSpeakersChanged',
+             'LocalTrackPublished', 'LocalTrackUnpublished', 'ParticipantMetadataChanged'].forEach(function (n) {
+                room.on(LK.RoomEvent[n], pintar);
+            });
+            room.on(LK.RoomEvent.TrackSubscribed, function (track) {
+                if (track.kind === LK.Track.Kind.Audio) { audios.appendChild(track.attach()); }
+                else if (track.source === LK.Track.Source.ScreenShare) {
+                    var v = track.attach(); v.setAttribute('playsinline', '');
+                    pantalla.textContent = ''; pantalla.appendChild(v); pantalla.classList.remove('d-none');
+                }
+            });
+            room.on(LK.RoomEvent.TrackUnsubscribed, function (track) {
+                track.detach().forEach(function (e) { e.remove(); });
+                if (track.source === LK.Track.Source.ScreenShare) { pantalla.classList.add('d-none'); pantalla.textContent = ''; }
+            });
+            room.on(LK.RoomEvent.AudioPlaybackStatusChanged, function () { btnAudio.classList.toggle('d-none', room.canPlaybackAudio); });
+            room.on(LK.RoomEvent.Disconnected, function () {
+                if (saliendo) { return; }
+                estado.textContent = 'La clase terminó o se perdió la conexión'; estado.classList.remove('pill--ok');
+                if (sala.dataset.finUrl) { setTimeout(function () { location.href = sala.dataset.finUrl; }, 2000); }
+            });
+            return room.connect(d.url, d.token);
+        })
+        .then(function () {
+            estado.textContent = 'Audio activo'; estado.classList.add('pill--ok');
+            if (btnMic) { btnMic.disabled = false; }
+            if (btnPantalla) { btnPantalla.disabled = false; }
+            btnAudio.classList.toggle('d-none', room.canPlaybackAudio);
+            pintar();
+            // El docente entra con el micrófono abierto; el estudiante entra silenciado.
+            if (puedeCompartir) {
+                return room.localParticipant.setMicrophoneEnabled(true).catch(function () {
+                    mostrarAviso('No se pudo usar el micrófono. Revisa los permisos del navegador.');
+                });
+            }
+        })
+        .then(pintar)
+        .catch(function (e) { estado.textContent = 'No se pudo conectar'; mostrarAviso(e.message || 'No se pudo entrar a la clase.'); });
+
+    // --- Controles
+    btnAudio.addEventListener('click', function () { room.startAudio(); });
+    if (btnMic) {
+        btnMic.addEventListener('click', function () {
+            var lp = room.localParticipant;
+            lp.setMicrophoneEnabled(!lp.isMicrophoneEnabled).then(pintar)
+                .catch(function () { mostrarAviso('No se pudo usar el micrófono. Revisa los permisos del navegador.'); });
+        });
+    }
+    if (btnPantalla) {
+        btnPantalla.addEventListener('click', function () {
+            var lp = room.localParticipant;
+            lp.setScreenShareEnabled(!lp.isScreenShareEnabled).then(pintar).catch(function () { /* canceló el selector */ });
+        });
+    }
+    window.addEventListener('pagehide', function () {
+        saliendo = true;
+        if (room) { room.disconnect(); }
+        if (sala.dataset.salirUrl && navigator.sendBeacon) {
+            var f = new FormData(); f.append('csrfmiddlewaretoken', sala.dataset.csrf);
+            navigator.sendBeacon(sala.dataset.salirUrl, f);
         }
     });
-    pintar();
 })();
 </script>

@@ -1,31 +1,33 @@
 <div class="app-nav" id="sidebar">
+    {% with c=curso.id_curso|default:paralelos.0.curso_id %}
     <ul class="rail">
         <li>
-            <a class="rail-link {% if active_rail == 'actividad' %}active{% endif %}" href="#">
-                <i class="bi bi-bell"></i><span>Actividad</span>
+            <a class="rail-link {% if active_rail == 'actividad' %}active{% endif %}" href="{% url 'notificaciones' %}">
+                <i class="bi bi-bell"></i><span>Actividad</span>{% if notif_no_leidas %}<span class="rail-badge" aria-label="{{ notif_no_leidas }} sin leer">{{ notif_no_leidas_texto }}</span>{% endif %}
             </a>
         </li>
         <li>
-            <a class="rail-link {% if active_rail == 'chat' %}active{% endif %}" href="#">
+            <a class="rail-link {% if active_rail == 'chat' %}active{% endif %}" href="{% if c %}{% url 'docente_mensajes' c %}{% else %}{% url 'docente_dashboard' %}{% endif %}">
                 <i class="bi bi-chat-square"></i><span>Chat</span>
             </a>
         </li>
         <li>
-            <a class="rail-link {% if active_rail == 'equipos' %}active{% endif %}" href="{% url 'docente_estudiantes_curso' curso.id_curso %}">
+            <a class="rail-link {% if active_rail == 'equipos' %}active{% endif %}" href="{% if c %}{% url 'docente_estudiantes_curso' c %}{% else %}{% url 'docente_dashboard' %}{% endif %}">
                 <i class="bi bi-people"></i><span>Equipos</span>
             </a>
         </li>
         <li>
-            <a class="rail-link {% if active_rail == 'tareas' %}active{% endif %}" href="{% url 'docente_actividades' curso.id_curso %}">
+            <a class="rail-link {% if active_rail == 'tareas' %}active{% endif %}" href="{% if c %}{% url 'docente_actividades' c %}{% else %}{% url 'docente_dashboard' %}{% endif %}">
                 <i class="bi bi-check2-square"></i><span>Tareas</span>
             </a>
         </li>
         <li>
-            <a class="rail-link {% if active_rail == 'llamadas' %}active{% endif %}" href="#">
+            <a class="rail-link {% if active_rail == 'llamadas' %}active{% endif %}" href="{% if c %}{% url 'docente_clase_iniciar' c %}{% else %}{% url 'docente_dashboard' %}{% endif %}">
                 <i class="bi bi-telephone"></i><span>Llamadas</span>
             </a>
         </li>
     </ul>
+    {% endwith %}
 
     <aside class="subpanel course-subnav" aria-label="Mis cursos">
         <div class="subpanel-header">

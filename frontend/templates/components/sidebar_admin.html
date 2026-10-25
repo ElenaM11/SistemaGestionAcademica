@@ -6,8 +6,8 @@
             </a>
         </li>
         <li>
-            <a class="rail-link {% if active_tab == 'actividad' %}active{% endif %}" href="#">
-                <i class="bi bi-bell"></i><span>Actividad</span>
+            <a class="rail-link {% if active_tab == 'actividad' %}active{% endif %}" href="{% url 'notificaciones' %}">
+                <i class="bi bi-bell"></i><span>Actividad</span>{% if notif_no_leidas %}<span class="rail-badge" aria-label="{{ notif_no_leidas }} sin leer">{{ notif_no_leidas_texto }}</span>{% endif %}
             </a>
         </li>
         <li>
@@ -54,6 +54,29 @@
                 <span class="chip c-gray">E</span> <span class="sub-label">Estudiantes</span>
             </a>
         {% endif %}
+    </aside>
+    {% endif %}
+
+    {% if active_tab == 'cursos' %}
+    <aside class="subpanel">
+        <div class="subpanel-header">
+            <h4>Cursos</h4>
+        </div>
+        <a class="sub-item {% if active_sub == 'paralelos' %}active{% endif %}" href="{% url 'admin_paralelos' %}" title="Paralelos">
+            <span class="chip c-orange">P</span> <span class="sub-label">Paralelos</span>
+        </a>
+        <a class="sub-item {% if active_sub == 'catalogo' %}active{% endif %}" href="{% url 'admin_catalogo_cursos' %}" title="Catálogo de cursos">
+            <span class="chip c-purple">C</span> <span class="sub-label">Catálogo de cursos</span>
+        </a>
+        <a class="sub-item {% if active_sub == 'inscripciones' %}active{% endif %}" href="{% url 'admin_inscripciones' %}?vista=inscribir" title="Inscripciones">
+            <span class="chip c-orange">I</span> <span class="sub-label">Inscripciones</span>
+        </a>
+        <a class="sub-item {% if active_sub == 'estudiantes' %}active{% endif %}" href="{% url 'admin_inscripciones' %}?vista=cursos" title="Cursos y estudiantes">
+            <span class="chip c-purple">E</span> <span class="sub-label">Cursos y estudiantes</span>
+        </a>
+        <a class="sub-item {% if active_sub == 'catalogos' %}active{% endif %}" href="{% url 'admin_catalogos' %}" title="Configurar catálogos">
+            <span class="chip c-gray">+</span> <span class="sub-label">Configurar catálogos</span>
+        </a>
     </aside>
     {% endif %}
 

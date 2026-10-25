@@ -1,13 +1,19 @@
 {% extends 'comunicacion_base.html' %}
-{# Mensajes del estudiante con su docente. Contexto: docente (usuario), mensajes (texto, es_mio). #}
-{% block title %}Mensajes - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
+{% block title %}Mensajes - Da Vinci{% endblock %}
 {% block topbar %}{% include 'components/topbar_estudiante.html' %}{% endblock %}
 {% block nav %}{% include 'components/estudiante_nav.html' with active_rail='chat' %}{% endblock %}
 {% block banner_titulo %}Mensajes{% endblock %}
 {% block banner_texto %}Conversación con tu docente{% endblock %}
+{% block tabs %}{% include 'components/comunicacion_tabs.html' with tab_activa='mensajes' rol_ui='estudiante' %}{% endblock %}
 
 {% block contenido %}
-<section class="panel-card">
+{% if inscripciones|length > 1 %}
+<nav class="nav nav-pills gap-2 course-section-tabs mb-3" aria-label="Tus cursos">
+    {% for i in inscripciones %}<a class="nav-link {% if i.paralelo_id == paralelo.pk %}active{% endif %}" href="?paralelo={{ i.paralelo_id }}">{{ i.paralelo.curso.idioma.nombre }} {{ i.paralelo.curso.nivel.codigo }} · {{ i.paralelo.turno.nombre }}</a>{% endfor %}
+</nav>
+{% endif %}
+{% if paralelo %}
+<section class="panel-card" id="chat" data-yo="{{ mi_id }}" data-ws="{{ ws_ruta }}">
     <div class="chat-head">
         <strong>{{ docente.usuario.nombres }} {{ docente.usuario.ap_pat }}</strong>
         <span class="pill">Docente · {{ curso.idioma.nombre }} {{ curso.nivel.codigo }}</span>
@@ -19,21 +25,17 @@
         <p class="text-empty mb-0">Escribe tu primera consulta para tu docente.</p>
         {% endfor %}
     </div>
-    <form class="chat-form" method="post" action="{% url 'estudiante_mensajes' %}">
+    <form class="chat-form" method="post" action="{% url 'estudiante_mensajes' %}?paralelo={{ paralelo.pk }}">
         {% csrf_token %}
         <input type="hidden" name="id_paralelo" value="{{ paralelo.pk }}">
         <label class="visually-hidden" for="texto">Tu mensaje</label>
-        <input class="form-control" type="text" id="texto" name="texto" maxlength="500" required autocomplete="off" placeholder="Escribe tu mensaje">
+        <input class="form-control" type="text" id="texto" name="texto" maxlength="1000" required autocomplete="off" placeholder="Escribe tu mensaje">
         <button class="btn btn-primary-custom btn-pill-lg" type="submit">Enviar</button>
     </form>
 </section>
+{% else %}
+<section class="panel-card"><div class="empty-state"><i class="bi bi-book"></i>Aún no tienes cursos inscritos.</div></section>
+{% endif %}
 {% endblock %}
 
-{% block page_js %}
-<script>
-(function () {
-    var lista = document.querySelector('.chat-scroll');
-    if (lista) { lista.scrollTop = lista.scrollHeight; }
-})();
-</script>
-{% endblock %}
+{% block page_js %}{% include 'components/chat_js.html' %}{% endblock %}

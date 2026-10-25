@@ -3,18 +3,19 @@
 {% block topbar %}{% include 'components/topbar_estudiante.html' %}{% endblock %}
 {% block nav %}{% include 'components/estudiante_nav.html' with active_rail='llamadas' %}{% endblock %}
 {% block banner_titulo %}Clase en vivo{% endblock %}
-{% block banner_texto %}{{ curso.idioma.nombre }} {{ curso.nivel.codigo }} · {{ paralelo.turno.nombre }} · {{ sesion.tema }} · <span id="cronometro" data-inicio="{{ sesion.inicio|date:'c' }}">00:00:00</span>{% endblock %}
+{% block banner_texto %}{{ curso.idioma.nombre }} {{ curso.nivel.codigo }} · {{ paralelo.turno.nombre }} · {{ sesion.tema }} · <span id="cronometro" data-inicio="{{ sesion.inicio_real|date:'c' }}">00:00:00</span>{% endblock %}
 
 {% block contenido %}
-{% include 'components/sala_participantes.html' %}
-
-<div class="live-controls">
-    <button type="button" class="btn btn-secondary-custom btn-pill-lg" id="btnMic" data-silenciado="true"
-            data-csrf="{{ csrf_token }}" data-url="{% url 'estudiante_clase_microfono' sesion.pk %}">Activar micrófono</button>
-    <form method="post" action="{% url 'estudiante_clase_salir' sesion.pk %}" class="d-inline">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger-custom btn-pill-lg">Salir de la sesión</button>
-    </form>
+<div id="sala" data-token-url="{% url 'comunicacion_token' sesion.pk %}" data-fin-url="{% url 'estudiante_clases_vivo' %}"
+     data-puede-compartir="false" data-salir-url="{% url 'estudiante_clase_salir' sesion.pk %}" data-csrf="{{ csrf_token }}">
+    {% include 'components/sala_participantes.html' %}
+    <div class="live-controls">
+        <button type="button" class="btn btn-secondary-custom btn-pill-lg" id="btnMic" disabled>Activar micrófono</button>
+        <form method="post" action="{% url 'estudiante_clase_salir' sesion.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger-custom btn-pill-lg">Salir de la sesión</button>
+        </form>
+    </div>
 </div>
 {% endblock %}
 
