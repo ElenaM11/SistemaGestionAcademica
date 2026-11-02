@@ -102,10 +102,10 @@ class Mensaje(models.Model):
             raise ValidationError("El mensaje no puede estar vacío.")
         if len(self.contenido) > 1000:
             raise ValidationError("El mensaje no puede superar los 1000 caracteres.")
-        if self.paralelo_id and self.emisor_id and self.receptor_id:
+        if self.emisor_id and self.receptor_id:
             from .permisos import pueden_conversar
-            if not pueden_conversar(self.emisor_id, self.receptor_id, self.paralelo_id):
-                raise ValidationError("No puedes enviar mensajes a este usuario en este curso.")
+            if not pueden_conversar(self.emisor_id, self.receptor_id):
+                raise ValidationError("No puedes enviar mensajes a esta persona.")
 
     def enviar(self):
         """Valida y guarda el mensaje (no leído)."""

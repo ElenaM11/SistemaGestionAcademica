@@ -1,7 +1,9 @@
 {% extends 'comunicacion_base.html' %}
+{# Sala en vivo del estudiante #}
 {% block title %}Clase en vivo - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
 {% block topbar %}{% include 'components/topbar_estudiante.html' %}{% endblock %}
 {% block nav %}{% include 'components/estudiante_nav.html' with active_rail='llamadas' %}{% endblock %}
+{% block main_class %} app-main--sala{% endblock %}
 {% block banner_titulo %}Clase en vivo{% endblock %}
 {% block banner_texto %}{{ curso.idioma.nombre }} {{ curso.nivel.codigo }} · {{ paralelo.turno.nombre }} · {{ sesion.tema }} · <span id="cronometro" data-inicio="{{ sesion.inicio_real|date:'c' }}">00:00:00</span>{% endblock %}
 
@@ -9,11 +11,14 @@
 <div id="sala" data-token-url="{% url 'comunicacion_token' sesion.pk %}" data-fin-url="{% url 'estudiante_clases_vivo' %}"
      data-puede-compartir="false" data-salir-url="{% url 'estudiante_clase_salir' sesion.pk %}" data-csrf="{{ csrf_token }}">
     {% include 'components/sala_participantes.html' %}
-    <div class="live-controls">
-        <button type="button" class="btn btn-secondary-custom btn-pill-lg" id="btnMic" disabled>Activar micrófono</button>
+    <div class="live-controls" role="toolbar" aria-label="Controles de la clase">
+        <button type="button" class="call-btn call-btn--off" id="btnMic" disabled aria-label="Activar micrófono" title="Activar micrófono"><i class="bi bi-mic-mute-fill" aria-hidden="true"></i></button>
+        <button type="button" class="call-btn call-btn--off" id="btnCamara" disabled aria-label="Activar cámara" title="Activar cámara"><i class="bi bi-camera-video-off-fill" aria-hidden="true"></i></button>
+        <button type="button" class="call-btn" id="btnPantalla" disabled aria-label="Compartir pantalla" title="Compartir pantalla"><i class="bi bi-display" aria-hidden="true"></i></button>
+        <button type="button" class="call-btn" id="btnFullscreen" aria-label="Pantalla completa" title="Pantalla completa"><i class="bi bi-fullscreen" aria-hidden="true"></i></button>
         <form method="post" action="{% url 'estudiante_clase_salir' sesion.pk %}" class="d-inline">
             {% csrf_token %}
-            <button type="submit" class="btn btn-danger-custom btn-pill-lg">Salir de la sesión</button>
+            <button type="submit" class="call-btn call-btn--danger" aria-label="Salir de la sesión" title="Salir de la sesión"><i class="bi bi-telephone-x-fill" aria-hidden="true"></i></button>
         </form>
     </div>
 </div>

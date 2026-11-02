@@ -1,7 +1,10 @@
 {% extends 'base.html' %}
 {% load static %}
+{# Actividad (campana): notificaciones del usuario. Sirve para administrador, docente y estudiante.
+   Contexto: usuario, rol ('administrador' | 'docente' | 'estudiante'), pagina (cada n: icono, tipo_texto,
+   destino, leida, mensaje, fecha), sin_leer, solo_no_leidas, y paralelos / inscripciones para el menú. #}
 {% block title %}Actividad - Da Vinci{% endblock %}
-{% block extra_css %}<link href="{% static 'css/sprint4.css' %}?v=3" rel="stylesheet">{% endblock %}
+{% block extra_css %}<link href="{% static 'css/sprint4.css' %}?v=4" rel="stylesheet">{% endblock %}
 
 {% block content %}
 {% if rol == 'docente' %}

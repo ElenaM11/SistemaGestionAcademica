@@ -1,8 +1,3 @@
-"""Integración con LiveKit (WebRTC). Requiere: pip install livekit-api
-
-settings.py:  LIVEKIT_URL = "wss://TU-PROYECTO.livekit.cloud"
-              LIVEKIT_API_KEY = "..."   LIVEKIT_API_SECRET = "..."   (mejor desde variables de entorno)
-"""
 import asyncio
 import json
 import logging
@@ -18,12 +13,12 @@ def configurado():
 
 
 def crear_token(*, sala, identidad, nombre, rol, puede_compartir):
-    """JWT para entrar a la sala. El docente puede publicar todo (audio y pantalla);
-    el estudiante solo el micrófono, así no puede compartir pantalla aunque manipule el navegador."""
+    # JWT para entrar a la sala. El docente puede publicar todo (audio, cámara y pantalla);
+    # el estudiante solo micrófono y cámara, así no puede compartir pantalla aunque manipule el navegador.
     from livekit import api
     permisos = api.VideoGrants(
         room_join=True, room=sala, can_subscribe=True, can_publish=True, can_publish_data=False,
-        can_publish_sources=None if puede_compartir else ["microphone"],
+        can_publish_sources=None if puede_compartir else ["microphone", "camera", "screen_share"],
     )
     return (
         api.AccessToken(settings.LIVEKIT_API_KEY, settings.LIVEKIT_API_SECRET)
@@ -33,7 +28,6 @@ def crear_token(*, sala, identidad, nombre, rol, puede_compartir):
 
 
 def cerrar_sala(sala):
-    """Expulsa a todos y borra la sala. Si falla no impide finalizar la clase: la sala vacía se cierra sola."""
     if not sala or not configurado():
         return False
     try:
@@ -46,6 +40,6 @@ def cerrar_sala(sala):
 
         asyncio.run(borrar())
         return True
-    except Exception:  #cualquier falla del servicio externo se registra y se ignora
+    except Exception:  # noqa: BLE001 - cualquier falla del servicio externo se registra y se ignora
         log.exception("No se pudo cerrar la sala %s en LiveKit", sala)
         return False

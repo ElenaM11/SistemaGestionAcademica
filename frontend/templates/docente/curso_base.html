@@ -1,8 +1,4 @@
 {% extends 'base.html' %}
-{# Base de las pantallas de curso del docente: topbar + riel + subpanel + banner + tabs.
-   Bloques que sobrescriben las pantallas hijas:
-     title, docente_nav, subtitulo, tabs, curso_contenido, page_js
-   Contexto: usuario, paralelos, curso, paralelo (paralelo seleccionado). #}
 {% block content %}
 {% include 'components/topbar_docente.html' %}
 {% block docente_nav %}{% include 'components/docente_nav.html' %}{% endblock %}

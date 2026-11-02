@@ -1,4 +1,4 @@
-{# Sala en vivo con LiveKit (WebRTC) para docente y estudiante.
+{# Sala en vivo con LiveKit (WebRTC) para docente y estudiante: audio, cámara, pantalla compartida y pantalla completa.
    Requiere #sala con: data-token-url, data-fin-url, data-puede-compartir ("true"/"false"),
    y solo para el estudiante: data-salir-url y data-csrf.
    Verifica en npm que esta versión de livekit-client exista antes de desplegar. #}
@@ -12,9 +12,11 @@
     var estado = $('estadoAudio'), contador = $('contadorParticipantes'), grilla = $('grillaParticipantes');
     var panel = $('listaParticipantes'), tituloPanel = $('tituloParticipantes'), audios = $('audios');
     var pantalla = $('pantallaCompartida'), aviso = $('avisoSala');
-    var btnMic = $('btnMic'), btnPantalla = $('btnPantalla'), btnAudio = $('btnAudio');
+    var btnMic = $('btnMic'), btnCamara = $('btnCamara'), btnPantalla = $('btnPantalla'), btnFull = $('btnFullscreen');
+    var btnAudio = $('btnAudio'), badge = $('badgeParticipantes');
     var puedeCompartir = sala.dataset.puedeCompartir === 'true';
-    var room = null, saliendo = false;
+    var room = null, saliendo = false, tarjetas = {};
+    var mas = null;
 
     function mostrarAviso(texto) { aviso.textContent = texto; aviso.classList.remove('d-none'); }
     function el(tag, clase, texto) {
@@ -22,6 +24,27 @@
         if (clase) { e.className = clase; }
         if (texto !== undefined) { e.textContent = texto; }
         return e;
+    }
+    function icono(btn, icon, etiqueta, estadoBtn) {
+        btn.querySelector('i').className = 'bi ' + icon;
+        btn.setAttribute('aria-label', etiqueta); btn.title = etiqueta;
+        btn.classList.toggle('call-btn--off', estadoBtn === 'off');
+        btn.classList.toggle('call-btn--on', estadoBtn === 'on');
+    }
+
+    // --- Pantalla completa (Esc la cierra: lo hace el propio navegador)
+    if (btnFull) {
+        if (!document.documentElement.requestFullscreen) { btnFull.classList.add('d-none'); }
+        btnFull.addEventListener('click', function () {
+            if (document.fullscreenElement) { document.exitFullscreen(); return; }
+            document.documentElement.requestFullscreen().catch(function () { mostrarAviso('Tu navegador no permitió la pantalla completa.'); });
+        });
+        document.addEventListener('fullscreenchange', function () {
+            var activa = !!document.fullscreenElement;
+            document.documentElement.classList.toggle('sala-pantalla-completa', activa);
+            if (activa) { icono(btnFull, 'bi-fullscreen-exit', 'Salir de pantalla completa (Esc)', 'on'); }
+            else { icono(btnFull, 'bi-fullscreen', 'Pantalla completa', ''); }
+        });
     }
 
     // --- Cronómetro de la clase (en el banner)
@@ -55,16 +78,6 @@
         room.remoteParticipants.forEach(function (p) { lista.push(p); });
         return lista.sort(function (a, b) { return (rolDe(a) === 'Docente' ? 0 : 1) - (rolDe(b) === 'Docente' ? 0 : 1); });
     }
-    function tarjeta(p) {
-        var nombre = p.name || p.identity, voz = vozDe(p);
-        var t = el('article', 'participant-card' + (p.isSpeaking ? ' is-speaking' : ''));
-        var av = el('div', 'avatar avatar--lg', iniciales(nombre)); av.setAttribute('aria-hidden', 'true');
-        t.appendChild(av);
-        t.appendChild(el('div', 'participant-name', nombre + (p === room.localParticipant ? ' (tú)' : '')));
-        t.appendChild(el('div', 'participant-role', rolDe(p)));
-        t.appendChild(el('span', 'pill ' + voz[1], voz[0]));
-        return t;
-    }
     function fila(p) {
         var nombre = p.name || p.identity, voz = vozDe(p);
         var f = el('div', 'participant-row');
@@ -75,20 +88,82 @@
         f.appendChild(av); f.appendChild(info); f.appendChild(el('span', 'pill ' + voz[1], voz[0]));
         return f;
     }
+
+    // Cada persona tiene una tarjeta que se actualiza en su lugar (así el video no parpadea)
+    function crearTarjeta() {
+        var video = el('video', 'tile-video');
+        video.autoplay = true; video.muted = true; video.playsInline = true;
+        var t = { raiz: el('article', 'participant-card'), video: video, avatar: el('div', 'avatar avatar--lg'),
+                  nombre: el('div', 'participant-name'), rol: el('div', 'participant-role'), pill: el('span', 'pill'), camara: null };
+        t.avatar.setAttribute('aria-hidden', 'true');
+        [t.video, t.avatar, t.nombre, t.rol, t.pill].forEach(function (n) { t.raiz.appendChild(n); });
+        return t;
+    }
+    function quitarTarjeta(id) {
+        var t = tarjetas[id];
+        if (!t) { return; }
+        if (t.camara) { t.camara.detach(t.video); }
+        t.raiz.remove();
+        delete tarjetas[id];
+    }
+    function actualizarTarjeta(p, t) {
+        var nombre = p.name || p.identity, voz = vozDe(p), local = p === room.localParticipant;
+        t.avatar.textContent = iniciales(nombre);
+        t.nombre.textContent = nombre + (local ? ' (tú)' : '');
+        t.rol.textContent = rolDe(p);
+        t.pill.className = 'pill ' + voz[1]; t.pill.textContent = voz[0];
+        t.raiz.classList.toggle('is-speaking', p.isSpeaking);
+        t.raiz.classList.toggle('is-local', local);
+        var pub = p.getTrackPublication(LK.Track.Source.Camera);
+        var track = pub && pub.track && !pub.isMuted ? pub.track : null;
+        if (track !== t.camara) {
+            if (t.camara) { t.camara.detach(t.video); }
+            if (track) { track.attach(t.video); }
+            t.camara = track;
+            t.raiz.classList.toggle('has-video', !!track);
+        }
+    }
     function etiquetas() {
         var lp = room.localParticipant;
-        if (btnMic) { btnMic.textContent = lp.isMicrophoneEnabled ? 'Silenciar micrófono' : 'Activar micrófono'; }
-        if (btnPantalla) { btnPantalla.textContent = lp.isScreenShareEnabled ? 'Dejar de compartir' : 'Compartir pantalla'; }
+        if (btnMic) {
+            if (lp.isMicrophoneEnabled) { icono(btnMic, 'bi-mic-fill', 'Silenciar micrófono', ''); }
+            else { icono(btnMic, 'bi-mic-mute-fill', 'Activar micrófono', 'off'); }
+        }
+        if (btnCamara) {
+            if (lp.isCameraEnabled) { icono(btnCamara, 'bi-camera-video-fill', 'Apagar cámara', ''); }
+            else { icono(btnCamara, 'bi-camera-video-off-fill', 'Activar cámara', 'off'); }
+        }
+        if (btnPantalla) {
+            if (lp.isScreenShareEnabled) { icono(btnPantalla, 'bi-display-fill', 'Dejar de compartir pantalla', 'on'); }
+            else { icono(btnPantalla, 'bi-display', 'Compartir pantalla', ''); }
+        }
     }
     function pintar() {
         if (!room) { return; }
-        var lista = todos();
+        var lista = todos(), visibles = lista.slice(0, MAX), presentes = {};
         contador.textContent = lista.length + (lista.length === 1 ? ' participante' : ' participantes');
-        grilla.textContent = '';
-        lista.slice(0, MAX).forEach(function (p) { grilla.appendChild(tarjeta(p)); });
-        if (lista.length > MAX) { grilla.appendChild(el('article', 'participant-card participant-card--more', '+' + (lista.length - MAX) + ' participantes')); }
+        visibles.forEach(function (p) { presentes[p.identity] = true; });
+        Object.keys(tarjetas).forEach(function (id) { if (!presentes[id]) { quitarTarjeta(id); } });
+        visibles.forEach(function (p) {
+            var t = tarjetas[p.identity] || (tarjetas[p.identity] = crearTarjeta());
+            actualizarTarjeta(p, t);
+        });
+        // Solo se reordena si cambió el orden, para no reiniciar los videos
+        var deseado = visibles.map(function (p) { return tarjetas[p.identity].raiz; });
+        var actual = Array.prototype.filter.call(grilla.children, function (n) { return n !== mas; });
+        var igual = deseado.length === actual.length && deseado.every(function (n, i) { return n === actual[i]; });
+        if (!igual) {
+            deseado.forEach(function (n) { grilla.appendChild(n); });
+            visibles.forEach(function (p) { var t = tarjetas[p.identity]; if (t.camara) { t.video.play().catch(function () {}); } });
+        }
+        if (lista.length > MAX) {
+            mas = mas || el('article', 'participant-card participant-card--more');
+            mas.textContent = '+' + (lista.length - MAX) + ' participantes';
+            grilla.appendChild(mas);
+        } else if (mas) { mas.remove(); }
         if (panel) { panel.textContent = ''; lista.forEach(function (p) { panel.appendChild(fila(p)); }); }
         if (tituloPanel) { tituloPanel.textContent = 'Participantes (' + lista.length + ')'; }
+        if (badge) { badge.textContent = lista.length; }
         etiquetas();
     }
 
@@ -112,10 +187,13 @@
                     var v = track.attach(); v.setAttribute('playsinline', '');
                     pantalla.textContent = ''; pantalla.appendChild(v); pantalla.classList.remove('d-none');
                 }
+                pintar();
             });
             room.on(LK.RoomEvent.TrackUnsubscribed, function (track) {
+                if (track.source === LK.Track.Source.Camera) { pintar(); return; }   // la tarjeta suelta su propio video
                 track.detach().forEach(function (e) { e.remove(); });
                 if (track.source === LK.Track.Source.ScreenShare) { pantalla.classList.add('d-none'); pantalla.textContent = ''; }
+                pintar();
             });
             room.on(LK.RoomEvent.AudioPlaybackStatusChanged, function () { btnAudio.classList.toggle('d-none', room.canPlaybackAudio); });
             room.on(LK.RoomEvent.Disconnected, function () {
@@ -127,11 +205,10 @@
         })
         .then(function () {
             estado.textContent = 'Audio activo'; estado.classList.add('pill--ok');
-            if (btnMic) { btnMic.disabled = false; }
-            if (btnPantalla) { btnPantalla.disabled = false; }
+            [btnMic, btnCamara, btnPantalla].forEach(function (b) { if (b) { b.disabled = false; } });
             btnAudio.classList.toggle('d-none', room.canPlaybackAudio);
             pintar();
-            // El docente entra con el micrófono abierto; el estudiante entra silenciado.
+            // El docente entra con el micrófono abierto; el estudiante entra silenciado. La cámara siempre empieza apagada.
             if (puedeCompartir) {
                 return room.localParticipant.setMicrophoneEnabled(true).catch(function () {
                     mostrarAviso('No se pudo usar el micrófono. Revisa los permisos del navegador.');
@@ -148,6 +225,13 @@
             var lp = room.localParticipant;
             lp.setMicrophoneEnabled(!lp.isMicrophoneEnabled).then(pintar)
                 .catch(function () { mostrarAviso('No se pudo usar el micrófono. Revisa los permisos del navegador.'); });
+        });
+    }
+    if (btnCamara) {
+        btnCamara.addEventListener('click', function () {
+            var lp = room.localParticipant;
+            lp.setCameraEnabled(!lp.isCameraEnabled).then(pintar)
+                .catch(function () { mostrarAviso('No se pudo usar la cámara. Revisa los permisos del navegador.'); });
         });
     }
     if (btnPantalla) {

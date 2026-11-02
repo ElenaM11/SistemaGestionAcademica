@@ -2,7 +2,6 @@ from django.apps import apps
 from .models import Notificacion
 
 def notificar_usuarios(usuario_ids, tipo, mensaje):
-    """Una Notificacion por cada usuario (sin repetir). Devuelve cuántas se crearon."""
     ids = list(dict.fromkeys(usuario_ids))
     Notificacion.objects.bulk_create(
         [Notificacion(usuario_id=i, tipo=tipo, mensaje=mensaje) for i in ids]

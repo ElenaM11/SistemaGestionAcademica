@@ -1,0 +1,116 @@
+{% extends 'comunicacion_base.html' %}
+{# Chat estilo Teams para docentes y estudiantes (docente<->estudiante, docente<->docente, estudiante<->estudiante).
+   Contexto: rol_ui, conversaciones, abierta (usuario, iniciales, rol, mensajes, ultimo_dia) o None, grupos, mi_id, ws_ruta. #}
+{% block title %}Mensajes - Da Vinci{% endblock %}
+{% block main_class %} app-main--chat{% endblock %}
+{% block topbar %}{% if rol_ui == 'docente' %}{% include 'components/topbar_docente.html' %}{% else %}{% include 'components/topbar_estudiante.html' %}{% endif %}{% endblock %}
+{% block nav %}{% if rol_ui == 'docente' %}{% include 'components/docente_nav.html' with active_rail='chat' nav_url_name='docente_mensajes' %}{% else %}{% include 'components/estudiante_nav.html' with active_rail='chat' %}{% endif %}{% endblock %}
+{% block banner_titulo %}Mensajes{% endblock %}
+{% block banner_texto %}{% if rol_ui == 'docente' %}Habla con tus estudiantes y con otros docentes{% else %}Habla con tus docentes y compañeros{% endif %}{% endblock %}
+{% block tabs %}{% include 'components/comunicacion_tabs.html' with tab_activa='mensajes' %}{% endblock %}
+
+{% block contenido %}
+<div class="chat-app {% if abierta %}has-selection{% endif %}" id="chatApp" data-yo="{{ mi_id }}" data-bandeja-ws="/ws/bandeja/">
+    <aside class="chat-list" aria-label="Conversaciones">
+        <div class="chat-list-head">
+            <h2 class="chat-list-title">Chat</h2>
+            <button type="button" class="icon-btn" data-bs-toggle="modal" data-bs-target="#modalNuevoChat" aria-label="Nuevo chat" title="Nuevo chat">
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="chat-search">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input type="search" id="filtroConversaciones" placeholder="Buscar en tus chats" aria-label="Buscar en tus chats" autocomplete="off">
+        </div>
+        <div class="conv-list" id="listaConversaciones">
+            {% for c in conversaciones %}
+            <a class="conv-item {% if abierta and abierta.usuario.pk == c.usuario.pk %}is-selected{% endif %} {% if c.no_leidos %}is-unread{% endif %}"
+               href="?con={{ c.usuario.pk }}" data-id="{{ c.usuario.pk }}" data-nombre="{{ c.usuario.nombres }} {{ c.usuario.ap_pat }}"
+               {% if abierta and abierta.usuario.pk == c.usuario.pk %}aria-current="true"{% endif %}>
+                <span class="avatar" aria-hidden="true">{{ c.iniciales }}</span>
+                <span class="conv-text">
+                    <span class="conv-name">{{ c.usuario.nombres }} {{ c.usuario.ap_pat }}</span>
+                    <span class="conv-last">{{ c.ultimo }}</span>
+                </span>
+                {% if c.no_leidos %}<span class="conv-count" aria-label="{{ c.no_leidos }} sin leer">{{ c.no_leidos }}</span>{% endif %}
+            </a>
+            {% empty %}
+            <div class="empty-state"><i class="bi bi-chat-dots"></i>Aún no tienes chats. Pulsa el lápiz para empezar uno.</div>
+            {% endfor %}
+        </div>
+    </aside>
+
+    <section class="chat-pane">
+        {% if abierta %}
+        <div id="chat" class="chat-open" data-con="{{ abierta.usuario.pk }}" data-ws="{{ ws_ruta }}"
+             data-nombre="{{ abierta.usuario.nombres }} {{ abierta.usuario.ap_pat }}" data-iniciales="{{ abierta.iniciales }}"
+             data-ultimo-dia="{{ abierta.ultimo_dia }}">
+            <div class="chat-head">
+                <a class="icon-btn chat-back" href="{{ request.path }}" aria-label="Volver a los chats"><i class="bi bi-arrow-left" aria-hidden="true"></i></a>
+                <span class="avatar" aria-hidden="true">{{ abierta.iniciales }}</span>
+                <strong class="chat-head-name">{{ abierta.usuario.nombres }} {{ abierta.usuario.ap_pat }}</strong>
+                <span class="pill">{{ abierta.rol }}</span>
+            </div>
+            <div class="chat-scroll" role="log" aria-live="polite" aria-label="Mensajes de la conversación">
+                {% for m in abierta.mensajes %}
+                {% if m.separador %}
+                <div class="chat-day">{{ m.separador }}</div>
+                {% else %}
+                <div class="msg {% if m.es_mio %}msg--out{% else %}msg--in{% endif %}">
+                    <div class="bubble {% if m.es_mio %}bubble--out{% else %}bubble--in{% endif %}">{{ m.texto }}</div>
+                    <span class="bubble-time">{{ m.fecha_envio|date:'H:i' }}</span>
+                </div>
+                {% endif %}
+                {% empty %}
+                <p class="text-empty">Todavía no hay mensajes. Escribe el primero.</p>
+                {% endfor %}
+            </div>
+            <form class="composer" method="post" action="{{ request.path }}">
+                {% csrf_token %}
+                <input type="hidden" name="con" value="{{ abierta.usuario.pk }}">
+                <label class="visually-hidden" for="texto">Escribe un mensaje</label>
+                <textarea id="texto" name="texto" rows="1" maxlength="1000" required placeholder="Escribe un mensaje"></textarea>
+                <button type="submit" class="send-btn" aria-label="Enviar" title="Enviar"><i class="bi bi-send-fill" aria-hidden="true"></i></button>
+            </form>
+        </div>
+        {% else %}
+        <div class="empty-state chat-placeholder"><i class="bi bi-chat-square-text"></i>Elige un chat de la lista o empieza uno nuevo con el lápiz.</div>
+        {% endif %}
+    </section>
+</div>
+
+<div class="modal fade" id="modalNuevoChat" tabindex="-1" aria-labelledby="tituloNuevoChat" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloNuevoChat">Nuevo chat</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="chat-search mb-3">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <input type="search" id="filtroContactos" placeholder="Buscar persona" aria-label="Buscar persona" autocomplete="off">
+                </div>
+                {% for g in grupos %}
+                <div class="contactos-grupo">
+                    <h6 class="contactos-titulo">{{ g.titulo }}</h6>
+                    {% for p in g.personas %}
+                    <a class="conv-item contacto" href="?con={{ p.usuario.pk }}" data-nombre="{{ p.usuario.nombres }} {{ p.usuario.ap_pat }} {{ p.usuario.ap_mat }}">
+                        <span class="avatar avatar--sm" aria-hidden="true">{{ p.iniciales }}</span>
+                        <span class="conv-text">
+                            <span class="conv-name">{{ p.usuario.nombres }} {{ p.usuario.ap_pat }} {{ p.usuario.ap_mat }}</span>
+                            {% if p.detalle %}<span class="conv-last">{{ p.detalle }}</span>{% endif %}
+                        </span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% empty %}
+                <p class="text-muted mb-0">Todavía no hay personas con las que puedas chatear.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_js %}{% include 'components/chat_js.html' %}{% endblock %}

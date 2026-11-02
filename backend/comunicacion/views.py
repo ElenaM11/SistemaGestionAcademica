@@ -5,8 +5,8 @@ from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Count, Q
-from django.http import Http404, JsonResponse
+from django.db.models import Count
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -20,18 +20,18 @@ from notificaciones.models import Notificacion
 from notificaciones.services import notificar_paralelo
 from usuarios.contexto import contexto_curso, inscripciones_activas, texto_error
 from usuarios.decorators import docente_requerido
-from usuarios.models import Estudiante
 
 from . import livekit
+from .chat import construir_chat
 from .decorators import estudiante_requerido
-from .models import Aviso, Mensaje, SesionParticipante
-from .permisos import pueden_conversar
-from .servicios import enviar_mensaje
+from .models import Aviso, SesionParticipante
 
 EN_CURSO = SesionClase.Estado.EN_CURSO
 DIAS = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
 SELECT_SESION = ("paralelo__curso__idioma", "paralelo__curso__nivel", "paralelo__turno")
 
+
+# utilidades
 def _sin_tildes(texto):
     return "".join(c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn").lower().strip()
 
@@ -64,13 +64,8 @@ def _estado_vista(sesion, ahora):
     return "por_iniciar" if faltan <= 30 else "programada"
 
 
-def _historial(usuario_a, usuario_b, paralelo, yo_id):
-    """Últimos 200 mensajes de la conversación, del más antiguo al más reciente."""
-    recientes = list(Mensaje.conversacion(usuario_a, usuario_b, paralelo).order_by("-fecha_envio")[:200])
-    return [{"texto": m.contenido, "es_mio": m.emisor_id == yo_id} for m in reversed(recientes)]
 
-
-#LiveKit
+# ---------------------------------------------------------------- LiveKit
 @never_cache
 @require_GET
 def token_livekit(request, sesion_pk):
@@ -101,7 +96,7 @@ def token_livekit(request, sesion_pk):
     return JsonResponse({"token": token, "url": settings.LIVEKIT_URL})
 
 
-#docente: clase en vivo
+# ---------------------------------------------------------------- docente: clase en vivo
 def _abrir_sesion(paralelo, tema):
     """Reanuda la clase en curso de hoy o inicia una (reutiliza la sesión programada de hoy si existe)."""
     ahora = timezone.localtime()
@@ -201,7 +196,7 @@ def docente_clase_finalizar(request, curso_id, sesion_pk):
     return redirect(f"{destino}?fecha={sesion.fecha:%Y-%m-%d}&paralelo={sesion.paralelo_id}")
 
 
-#docente: avisos y mensajes
+# docente: avisos y mensajes
 @docente_requerido
 def docente_avisos(request, curso_id):
     ctx = contexto_curso(request, curso_id)
@@ -231,49 +226,14 @@ def docente_avisos(request, curso_id):
 @docente_requerido
 def docente_mensajes(request, curso_id):
     ctx = contexto_curso(request, curso_id)
-    paralelo, yo = ctx["paralelo"], ctx["usuario"]
-
-    if request.method == "POST":
-        try:
-            receptor_id = int(request.POST.get("estudiante", ""))
-        except ValueError:
-            raise Http404("Conversación no válida.")
-        try:
-            enviar_mensaje(yo, receptor_id, paralelo, request.POST.get("texto", ""))
-        except ValidationError as e:
-            messages.error(request, texto_error(e))
-        return redirect(f"{request.path}?paralelo={paralelo.pk}&estudiante={receptor_id}")
-
-    seleccionada, ws_ruta = None, ""
-    try:
-        sel_id = int(request.GET.get("estudiante", ""))
-    except ValueError:
-        sel_id = None
-    if sel_id and pueden_conversar(yo.pk, sel_id, paralelo.pk):
-        estudiante = get_object_or_404(Estudiante.objects.select_related("usuario"), pk=sel_id)
-        Mensaje.objects.filter(emisor=estudiante.usuario, receptor=yo, paralelo=paralelo, leido=False).update(leido=True)
-        _marcar_notificaciones(yo, "MENSAJE")
-        seleccionada = {"estudiante": estudiante, "mensajes": _historial(yo, estudiante.usuario, paralelo, yo.pk)}
-        ws_ruta = f"/ws/chat/{paralelo.pk}/{sel_id}/"
-
-    recientes = (Mensaje.objects.filter(paralelo=paralelo).filter(Q(emisor=yo) | Q(receptor=yo))
-                 .order_by("-fecha_envio").values("emisor_id", "receptor_id", "contenido")[:500])
-    ultimos = {}
-    for m in recientes:
-        otro = m["receptor_id"] if m["emisor_id"] == yo.pk else m["emisor_id"]
-        ultimos.setdefault(otro, m["contenido"])
-    sin_leer = set(Mensaje.objects.filter(paralelo=paralelo, receptor=yo, leido=False)
-                   .values_list("emisor_id", flat=True))
-    estudiantes = Estudiante.objects.select_related("usuario").in_bulk(list(ultimos))
-    conversaciones = [{"estudiante": estudiantes[i], "ultimo_mensaje": ultimos[i], "nuevo": i in sin_leer}
-                      for i in ultimos if i in estudiantes]
-
-    ctx.update(conversaciones=conversaciones, seleccionada=seleccionada, ws_ruta=ws_ruta, mi_id=yo.pk,
-               hermanos=[p for p in ctx["paralelos"] if p.curso_id == curso_id])
-    return render(request, "docente/mensajes.html", ctx)
+    respuesta, datos = construir_chat(request, ctx["usuario"])
+    if respuesta:
+        return respuesta
+    ctx.update(datos, rol_ui="docente")
+    return render(request, "comunicacion/chat.html", ctx)
 
 
-#estudiante
+# ESTUDIANTE
 def _inscripciones(estudiante):
     return list(
         EstudianteParalelo.objects.filter(estudiante=estudiante, estado="ACTIVO")
@@ -306,7 +266,7 @@ def estudiante_clases_vivo(request):
                            "estado_vista": "en_vivo", "es_hoy": True, "fecha": hoy, "hora_inicio": s.hora_inicio})
             continue
         horas = sorted(h.hora_inicio for h in p.horarios.all() if _sin_tildes(h.dia_semana) == DIAS[hoy.weekday()])
-        if horas:  # clase que le toca hoy según el horario, aún sin iniciar
+        if horas:  
             clases.append({"pk": None, "paralelo": p, "tema": "", "docente": p.docente,
                            "estado_vista": "programada", "es_hoy": True, "fecha": hoy, "hora_inicio": horas[0]})
     clases.sort(key=lambda c: (c["estado_vista"] != "en_vivo", c["hora_inicio"] or time.max))
@@ -353,20 +313,9 @@ def estudiante_avisos(request):
 
 @estudiante_requerido
 def estudiante_mensajes(request):
-    ctx = _ctx_estudiante(request, request.GET.get("paralelo") or request.POST.get("id_paralelo"), por_defecto=True)
-    paralelo, usuario = ctx["paralelo"], ctx["usuario"]
-    mensajes, ws_ruta, docente = [], "", None
-    if paralelo:
-        docente = paralelo.docente
-        if request.method == "POST":
-            try:
-                enviar_mensaje(usuario, docente.pk, paralelo, request.POST.get("texto", ""))
-            except ValidationError as e:
-                messages.error(request, texto_error(e))
-            return redirect(f"{request.path}?paralelo={paralelo.pk}")
-        Mensaje.objects.filter(emisor=docente.usuario, receptor=usuario, paralelo=paralelo, leido=False).update(leido=True)
-        _marcar_notificaciones(usuario, "MENSAJE")
-        mensajes = _historial(usuario, docente.usuario, paralelo, usuario.pk)
-        ws_ruta = f"/ws/chat/{paralelo.pk}/{docente.pk}/"
-    ctx.update(docente=docente, mensajes=mensajes, ws_ruta=ws_ruta, mi_id=usuario.pk)
-    return render(request, "estudiante/mensajes.html", ctx)
+    ctx = _ctx_estudiante(request)
+    respuesta, datos = construir_chat(request, ctx["usuario"])
+    if respuesta:
+        return respuesta
+    ctx.update(datos, rol_ui="estudiante")
+    return render(request, "comunicacion/chat.html", ctx)

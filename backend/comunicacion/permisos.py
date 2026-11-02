@@ -1,17 +1,10 @@
-from cursos.models import EstudianteParalelo, Paralelo
+from usuarios.models import Docente, Estudiante
 
-def pueden_conversar(uid_a, uid_b, paralelo_id):
+
+def pueden_conversar(uid_a, uid_b):
+
     if uid_a == uid_b:
         return False
-    try:
-        docente_id = Paralelo.objects.values_list("docente_id", flat=True).get(pk=paralelo_id)
-    except Paralelo.DoesNotExist:
-        return False
-    if docente_id == uid_a:
-        estudiante_id = uid_b
-    elif docente_id == uid_b:
-        estudiante_id = uid_a
-    else:
-        return False
-    return EstudianteParalelo.objects.filter(
-        paralelo_id=paralelo_id, estudiante_id=estudiante_id, estado="ACTIVO").exists()
+    ids = set(Docente.objects.filter(pk__in=[uid_a, uid_b], usuario__estado=True).values_list("pk", flat=True))
+    ids |= set(Estudiante.objects.filter(pk__in=[uid_a, uid_b], usuario__estado=True).values_list("pk", flat=True))
+    return ids == {uid_a, uid_b}
