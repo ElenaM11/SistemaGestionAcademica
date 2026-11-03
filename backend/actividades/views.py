@@ -82,6 +82,13 @@ def docente_actividades(request, curso_id):
 
 
 @docente_requerido
+def docente_cuestionario_crear(request, curso_id):
+    """Muestro el editor visual para preparar un cuestionario del curso."""
+    ctx = contexto_curso(request, curso_id)
+    return render(request, "docente/cuestionario_crear.html", ctx)
+
+
+@docente_requerido
 def docente_actividad_editar(request, curso_id, pk):
     ctx = contexto_curso(request, curso_id)
     actividad = _actividad_del_docente(request, curso_id, pk)

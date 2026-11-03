@@ -3,6 +3,7 @@ from . import views, views_entregas
 
 urlpatterns = [
     path("", views.docente_actividades, name="docente_actividades"),
+    path("nuevo-cuestionario/", views.docente_cuestionario_crear, name="docente_cuestionario_crear"),
     path("<int:pk>/editar/", views.docente_actividad_editar, name="docente_actividad_editar"),
     path("<int:pk>/eliminar/", views.docente_actividad_eliminar, name="docente_actividad_eliminar"),
     # Ruta para ver la lista de entregas y calificar 

@@ -1,0 +1,30 @@
+/* Presento el cuestionario con la misma estructura, paleta y jerarquía visual del mockup. */
+.cuestionario-main{min-height:calc(100vh - 72px);padding:32px 38px!important;background:#f3f5f8;color:#151515;display:block}
+.cuestionario-cursos{padding:28px 18px;background:#fff;border:1px solid #dce2e9;border-top:0;border-bottom:0;min-width:0}
+.cuestionario-cursos h2{font-size:1.45rem;font-weight:700;margin:0 0 20px}
+.cuestionario-curso{display:flex;align-items:center;gap:12px;padding:12px;margin:0 0 6px;border-radius:12px;color:#151515;text-decoration:none;font-size:1.02rem;line-height:1.35}
+.cuestionario-curso span{flex:0 0 44px;display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:#202020;color:#fff;font-weight:700}
+.cuestionario-curso.seleccionado{background:#fff0e8;border-left:4px solid #ff5a00}.cuestionario-curso.seleccionado span{background:#ff5a00}
+.cuestionario-contenido{padding:0;min-width:0}
+.volver-tareas{display:inline-flex;align-items:center;gap:8px;margin:0 0 14px;color:#ff5a00;text-decoration:none;font-weight:700}.volver-tareas:hover{text-decoration:underline;color:#e94f00}
+.cuestionario-banner{padding:28px 38px;border-radius:20px;background:linear-gradient(110deg,#602b8c,#8146ad);color:#fff;margin-bottom:24px}
+.cuestionario-banner h1{font-size:1.8rem;font-weight:700;margin:0 0 8px;color:#fff}.cuestionario-banner p{font-size:1.1rem;margin:0;color:#eee2fa}
+.cuestionario-columnas{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(280px,1fr);align-items:start;gap:22px}
+.cuestionario-tarjeta{min-width:0;background:#fff;border:1px solid #dbe2e9;border-radius:18px;padding:24px;box-shadow:0 1px 2px #1e293b08}
+.cuestionario-tarjeta label{display:block;margin:18px 0 8px;font-size:1rem}.cuestionario-tarjeta h2{font-size:1.25rem;font-weight:700;color:#151515}.cuestionario-tarjeta p{font-size:1rem;line-height:1.55}
+.cuestionario-tarjeta textarea{display:block;width:100%;min-height:135px;border:1px solid #dbe2e9;border-radius:12px;padding:14px;font:inherit;resize:vertical}
+.cuestionario-aviso{padding:16px 20px;background:#e8f0fc;border:1px solid #3475cf;border-radius:14px;color:#173a68;font-weight:700}
+.respuesta{padding:12px 16px;border:2px solid;border-radius:12px;font-weight:700}.respuesta-correcta{background:#e3f4e9;border-color:#218347}.respuesta-esperada{background:#fff0e8;border-color:#ff5a00}
+.texto-secundario{display:block;color:#788394;margin-top:20px}.acciones{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:10px;margin-top:20px}
+.cuestionario-main .boton-naranja,.cuestionario-main .boton-claro{display:inline-flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;padding:10px 22px;text-decoration:none;font-weight:700;border:0;font-size:1rem;cursor:pointer}
+.cuestionario-main .boton-naranja{background:#ff5a00;color:#fff}.cuestionario-main .boton-naranja:hover{background:#e94f00;color:#fff}.cuestionario-main .boton-claro{border:1px solid #dbe2e9;background:#fff;color:#151515}
+.etiquetas{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}.etiquetas span,.etiqueta-azul,.etiqueta-verde{display:inline-block;padding:5px 13px;border-radius:999px;background:#f1f3f6}
+.etiquetas span+span{background:#fff4d4;color:#8b6500}.etiqueta-azul{background:#e8f0fc;color:#214675}.etiqueta-verde{background:#e3f4e9;color:#167344}
+.apoyo p{margin-top:20px;color:#454b55}.avance-titulo{display:flex;justify-content:space-between;margin-top:20px}.barra-avance{height:10px;background:#dce2e9;border-radius:99px;overflow:hidden;margin-top:8px}.barra-avance span{display:block;height:100%;border-radius:inherit;background:#ff5a00}
+.palabras,.orden-respuesta{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 20px}.palabras button{background:#fff;border:1px solid #dbe2e9;border-radius:999px;padding:10px 16px;font:inherit;color:#20242a;cursor:pointer;transition:background .15s,border-color .15s,opacity .15s}.palabras button:hover:not(:disabled){border-color:#ff5a00;background:#fff0e8}.palabras button:disabled{opacity:.38;cursor:default}
+.orden-respuesta{min-height:54px;align-items:center}.orden-respuesta .ficha-seleccionada,.orden-respuesta .espacio{min-width:74px;min-height:48px;padding:10px 14px;background:#fff;border:2px solid #ff5a00;border-radius:10px;font:inherit;font-weight:700;color:#151515}.orden-respuesta .ficha-seleccionada{cursor:pointer}.orden-respuesta .ficha-seleccionada:hover{background:#fff0e8}.orden-respuesta .espacio{display:grid;place-items:center;border-color:#dbe2e9;border-style:dashed;color:#8992a0;font-weight:400}
+.resultado-interaccion{min-height:1.5em;margin:12px 0 0;color:#667085}.resultado-interaccion.es-correcta{color:#167344;font-weight:700}.resultado-interaccion.es-error{color:#b42318;font-weight:700}
+.cuestionario-main .siguiente-oculto{display:none}.cuestionario-main .siguiente-visible{display:inline-flex}
+.quiz-launch-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:7px 12px;border-radius:999px;background:#ff5a00;color:#fff!important;text-decoration:none!important;font-size:.83rem;font-weight:700;line-height:1.2;white-space:nowrap}.quiz-launch-btn:hover{background:#e94f00;color:#fff!important}
+@media(max-width:1100px){.cuestionario-main{grid-template-columns:250px minmax(0,1fr);padding:24px!important}.cuestionario-contenido{padding-left:24px}.cuestionario-columnas{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:760px){.cuestionario-main{display:block;padding:16px!important}.cuestionario-cursos{display:none}.cuestionario-contenido{padding:0}.cuestionario-banner{padding:22px;margin-bottom:16px}.cuestionario-banner h1{font-size:1.45rem}.cuestionario-tarjeta{padding:18px}.cuestionario-columnas{gap:14px}}

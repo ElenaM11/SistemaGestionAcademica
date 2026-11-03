@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Present simple: cuestionario - Da Vinci{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/cuestionario.css?v=2">{% endblock %}
+{% block content %}
+{% include 'components/topbar.html' with user_name=usuario.nombres user_role='Estudiante' initials=usuario.iniciales show_search=True %}
+{% include 'components/estudiante_nav.html' with active_rail='tareas' %}
+<main class="app-main cuestionario-main">
+    <div class="cuestionario-contenido">
+        <a class="volver-tareas" href="{% url 'estudiante_academico' %}?vista=tareas"><i class="bi bi-arrow-left"></i> Volver a mis tareas</a>
+        <header class="cuestionario-banner"><h1>{{ actividad.titulo }}</h1><p>Pregunta {{ pregunta }} de 5</p></header>
+        <div class="cuestionario-columnas">
+            <section class="cuestionario-tarjeta">
+                {% if pregunta == 1 %}
+                    <div class="cuestionario-aviso">Respuesta válida: es una variante correcta</div>
+                    <label>Tu respuesta</label><div class="respuesta respuesta-correcta">Every day she walks to school</div>
+                    <label>Lo que esperaba tu docente</label><div class="respuesta respuesta-esperada">She walks to school every day</div>
+                    <label>Explicación</label><p>El tiempo (every day) puede ir al inicio o al final de la oración. Las dos formas son correctas.</p>
+                    <small class="texto-secundario">Revisado por IA. Es orientativo y no tiene nota.</small>
+                    <div class="acciones"><a class="boton-naranja" href="?pregunta=2">Siguiente pregunta</a></div>
+                {% elif pregunta == 2 %}
+                    <div class="etiquetas"><span>Pregunta 2 de 5</span><span>Intento 2 de 3</span></div>
+                    <p>Traduce al inglés</p><h2>Ella camina a la escuela todos los días.</h2>
+                    <label for="respuesta-cuestionario">Tu respuesta</label><textarea id="respuesta-cuestionario" placeholder="Escribe tu respuesta"></textarea>
+                    <div class="acciones"><button class="boton-naranja" type="button" id="verificarTexto">Verificar</button><a class="boton-claro" href="?pregunta=3">Siguiente pregunta</a></div>
+                    <p id="resultadoTexto" class="resultado-interaccion" aria-live="polite"></p>
+                {% elif pregunta == 3 %}
+                    <div class="etiquetas"><span>Pregunta {{ pregunta }} de 5</span><span>Intento 1 de 3</span></div>
+                    <p>Ordena la oración</p>
+                    <div class="palabras" id="bancoPalabras" aria-label="Palabras disponibles">
+                        <button type="button" data-palabra="she">she</button><button type="button" data-palabra="walks">walks</button><button type="button" data-palabra="to school">to school</button><button type="button" data-palabra="every">every</button><button type="button" data-palabra="day">day</button>
+                    </div>
+                    <label>Tu oración</label><div class="orden-respuesta" id="oracionEstudiante" aria-live="polite"></div>
+                    <div class="acciones"><button class="boton-claro" type="button" id="limpiarOracion">Limpiar</button><button class="boton-naranja" type="button" id="verificarOracion">Verificar</button><a class="boton-naranja siguiente-oculto" id="siguienteOrden" href="?pregunta=4">Siguiente pregunta</a></div>
+                    <p id="resultadoOrden" class="resultado-interaccion" aria-live="polite"></p>
+                {% else %}
+                    <div class="etiquetas"><span>Pregunta {{ pregunta }} de 5</span><span>Respuesta abierta</span></div>
+                    <p>{% if pregunta == 4 %}Escribe una oración sobre lo que haces todos los días.{% else %}Escribe una oración usando el presente simple.{% endif %}</p>
+                    <label for="respuesta-cuestionario">Tu respuesta</label><textarea id="respuesta-cuestionario" placeholder="Escribe tu respuesta"></textarea>
+                    <div class="acciones"><button class="boton-naranja" type="button" id="verificarTexto">Verificar</button><a class="boton-naranja siguiente-oculto" id="siguienteTexto" href="{% if pregunta == 4 %}?pregunta=5{% else %}{% url 'estudiante_academico' %}?vista=tareas{% endif %}">{% if pregunta == 4 %}Siguiente pregunta{% else %}Finalizar cuestionario{% endif %}</a></div>
+                    <p id="resultadoTexto" class="resultado-interaccion" aria-live="polite"></p>
+                {% endif %}
+            </section>
+            <aside class="cuestionario-tarjeta apoyo">
+                {% if pregunta == 1 %}<h2>Resultado</h2><span class="etiqueta-azul">Variante válida</span><p>Tu docente podrá ver que la respuesta fue aceptada como variante.</p>
+                {% else %}<h2>Apoyo de IA</h2><span class="etiqueta-verde">Activado en esta tarea</span><p>{% if pregunta == 2 %}Pulsa Verificar para revisar tu respuesta.{% elif pregunta == 3 %}Toca las palabras en orden para armar la oración y pulsa Verificar.{% else %}Escribe tu respuesta para continuar.{% endif %}</p><div class="avance-titulo">Avance del cuestionario <strong>{{ avance }}%</strong></div><div class="barra-avance"><span style="width: {{ avance }}%"></span></div>{% endif %}
+            </aside>
+        </div>
+    </div>
+</main>
+{% endblock %}
+{% block extra_js %}
+<script>
+// Organizo las fichas que selecciona el estudiante y habilito el avance visual cuando completa la oración.
+(() => {
+    const banco = document.getElementById('bancoPalabras');
+    const oracion = document.getElementById('oracionEstudiante');
+    if (banco && oracion) {
+        const seleccionadas = [];
+        const dibujar = () => {
+            oracion.replaceChildren();
+            seleccionadas.forEach((palabra, indice) => {
+                const ficha = document.createElement('button');
+                ficha.type = 'button'; ficha.className = 'ficha-seleccionada';
+                ficha.textContent = `${indice + 1}. ${palabra}`;
+                ficha.setAttribute('aria-label', `${palabra}, quitar de la oración`);
+                ficha.addEventListener('click', () => { seleccionadas.splice(indice, 1); dibujar(); });
+                oracion.appendChild(ficha);
+            });
+            if (seleccionadas.length < 5) {
+                const espacio = document.createElement('span'); espacio.className = 'espacio';
+                espacio.textContent = String(seleccionadas.length + 1); oracion.appendChild(espacio);
+            }
+            banco.querySelectorAll('button').forEach(boton => {
+                boton.disabled = seleccionadas.includes(boton.dataset.palabra);
+            });
+        };
+        banco.addEventListener('click', evento => {
+            const boton = evento.target.closest('[data-palabra]');
+            if (boton && !boton.disabled) { seleccionadas.push(boton.dataset.palabra); dibujar(); }
+        });
+        document.getElementById('limpiarOracion').addEventListener('click', () => {
+            seleccionadas.length = 0; dibujar();
+            document.getElementById('resultadoOrden').textContent = '';
+            document.getElementById('resultadoOrden').className = 'resultado-interaccion';
+        });
+        document.getElementById('verificarOracion').addEventListener('click', () => {
+            const salida = document.getElementById('resultadoOrden');
+            const correcta = 'she walks to school every day';
+            const respuesta = seleccionadas.join(' ').toLowerCase();
+            const valida = respuesta === correcta;
+            salida.textContent = seleccionadas.length < 5 ? 'Completa la oración antes de verificar.' : (valida ? '¡Correcto! El orden de las palabras es válido.' : 'Revisa el orden de las palabras e inténtalo de nuevo.');
+            salida.className = `resultado-interaccion ${valida ? 'es-correcta' : 'es-error'}`;
+            document.getElementById('siguienteOrden').classList.toggle('siguiente-visible', valida);
+        });
+        dibujar();
+    }
+    document.getElementById('verificarTexto')?.addEventListener('click', () => {
+        const salida = document.getElementById('resultadoTexto');
+        const tieneRespuesta = Boolean(document.getElementById('respuesta-cuestionario').value.trim());
+        salida.textContent = tieneRespuesta ? 'Respuesta lista para revisión.' : 'Escribe una respuesta antes de verificar.';
+        salida.className = 'resultado-interaccion';
+        document.getElementById('siguienteTexto')?.classList.toggle('siguiente-visible', tieneRespuesta);
+    });
+})();
+</script>
+{% endblock %}

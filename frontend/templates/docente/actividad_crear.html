@@ -98,7 +98,7 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label" for="tipo">Tipo</label>
-                            <select class="form-select" id="tipo" name="tipo">
+                            <select class="form-select" id="tipo" name="tipo" data-cuestionario-url="{% url 'docente_cuestionario_crear' curso.id_curso %}">
                                 <option value="escrita" {% if request.POST.tipo == 'escrita' %}selected{% endif %}>Escrita</option>
                                 <option value="oral" {% if request.POST.tipo == 'oral' %}selected{% endif %}>Oral</option>
                                 <option value="cuestionario" {% if request.POST.tipo == 'cuestionario' %}selected{% endif %}>Cuestionario</option>
@@ -154,5 +154,12 @@
     bootstrap.Modal.getOrCreateInstance(modal).show();
     {% endif %}
 })();
+// Redirijo al editor de preguntas cuando el docente elige el tipo cuestionario.
+var selectorTipoActividad = document.getElementById('tipo');
+selectorTipoActividad?.addEventListener('change', function () {
+    if (selectorTipoActividad.value === 'cuestionario') {
+        window.location.href = selectorTipoActividad.dataset.cuestionarioUrl;
+    }
+});
 </script>
 {% endblock %}

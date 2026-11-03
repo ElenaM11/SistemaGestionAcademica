@@ -1,0 +1,106 @@
+{% extends 'docente/curso_base.html' %}
+{% load static %}
+{% block title %}Crear cuestionario - Da Vinci{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cuestionario_docente.css' %}">{% endblock %}
+{% block docente_nav %}{% include 'components/docente_nav.html' with active_rail='tareas' nav_url_name='docente_actividades' %}{% endblock %}
+{% block subtitulo %}Cuestionario con las respuestas válidas del docente{% endblock %}
+{% block tabs %}{% include 'components/curso_tabs.html' with tab_activa='tareas' %}{% endblock %}
+
+{% block curso_contenido %}
+<section class="editor-cuestionario">
+    <div class="editor-columna-principal">
+        <form class="panel-card editor-form" id="formCuestionario" method="post" action="{% url 'docente_actividades' curso.id_curso %}">
+            {% csrf_token %}
+            <input type="hidden" name="tipo" value="cuestionario">
+            <h2>Nueva tarea</h2>
+            <label for="tituloCuestionario">Título</label>
+            <input id="tituloCuestionario" class="form-control" name="titulo" maxlength="200" value="Present simple: cuestionario" required>
+
+            <div class="editor-dos-columnas">
+                <div><label for="fechaLimiteCuestionario">Fecha límite</label><input id="fechaLimiteCuestionario" class="form-control" name="fecha_limite" type="date" required></div>
+                <div><label for="puntajeCuestionario">Puntaje máximo</label><input id="puntajeCuestionario" class="form-control" name="puntaje_maximo" type="number" min="1" max="999" value="10" required></div>
+            </div>
+
+            <div class="switch-row editor-switch">
+                <label for="apoyoIaCuestionario">Usar apoyo de IA</label>
+                <input id="apoyoIaCuestionario" class="form-check-input" name="asistente_ia" type="checkbox" role="switch" checked>
+            </div>
+            <p class="editor-ayuda">Los estudiantes podrán verificar cada respuesta. La IA interviene solo si no coincide con las tuyas, con un máximo de 3 intentos por pregunta.</p>
+
+            <div id="listaPreguntas">
+                <article class="pregunta-editor" data-pregunta>
+                    <div class="pregunta-cabecera"><h3>Pregunta 1</h3><select class="form-select" aria-label="Tipo de pregunta 1"><option>Escribir</option><option>Ordenar</option></select></div>
+                    <label>Enunciado</label><input class="form-control" value="Traduce: Ella camina a la escuela todos los días.">
+                    <label>Respuestas válidas</label>
+                    <div class="respuestas-validas"><input class="form-control" value="She walks to school every day"><input class="form-control" value="Every day she walks to school"></div>
+                    <button class="enlace-editor" type="button" data-agregar-respuesta>+ agregar respuesta válida</button>
+                </article>
+
+                <article class="pregunta-editor" data-pregunta>
+                    <div class="pregunta-cabecera"><h3>Pregunta 2</h3><select class="form-select" aria-label="Tipo de pregunta 2"><option>Ordenar</option><option>Escribir</option></select></div>
+                    <label>Enunciado</label><input class="form-control" value="Ordena la oración.">
+                    <label>Palabras o frases (fichas)</label><div class="fichas"><span>she</span><span>walks</span><span>to school</span><span>every</span><span>day</span></div>
+                    <label>Respuestas válidas</label><div class="respuestas-validas"><input class="form-control" value="she walks to school every day"></div>
+                    <button class="enlace-editor" type="button" data-agregar-respuesta>+ agregar respuesta válida</button>
+                </article>
+
+                <article class="pregunta-editor pregunta-incompleta" data-pregunta>
+                    <div class="pregunta-cabecera"><h3>Pregunta 3</h3><select class="form-select" aria-label="Tipo de pregunta 3"><option>Escribir</option><option>Ordenar</option></select></div>
+                    <label>Enunciado</label><input class="form-control" placeholder="Escribe una oración con el verbo study.">
+                    <label>Respuestas válidas</label><div class="respuestas-validas"></div>
+                    <button class="enlace-editor" type="button" data-agregar-respuesta>+ agregar respuesta válida</button>
+                    <p class="error-editor">Agrega al menos una respuesta válida para poder guardar.</p>
+                </article>
+            </div>
+
+            <button class="enlace-editor agregar-pregunta" type="button" id="agregarPregunta">+ Agregar pregunta</button>
+            <div class="form-actions">
+                <a class="btn btn-secondary-custom btn-pill-lg" href="{% url 'docente_actividades' curso.id_curso %}">Cancelar</a>
+                <button class="btn btn-primary-custom btn-pill-lg" type="submit">Publicar tarea</button>
+            </div>
+        </form>
+    </div>
+
+    <aside class="panel-card como-funciona">
+        <h2>Cómo funciona</h2>
+        <ol>
+            <li>El estudiante responde y pulsa Verificar.</li>
+            <li>El sistema compara con tus respuestas válidas.</li>
+            <li>Si coincide, es correcta y no se usa la IA.</li>
+            <li>Si no coincide, la IA revisa y explica el error.</li>
+        </ol>
+    </aside>
+</section>
+<template id="plantillaPregunta">
+    <article class="pregunta-editor" data-pregunta>
+        <div class="pregunta-cabecera"><h3></h3><select class="form-select" aria-label="Tipo de pregunta"><option>Escribir</option><option>Ordenar</option></select></div>
+        <label>Enunciado</label><input class="form-control" placeholder="Escribe el enunciado">
+        <label>Palabras o frases (fichas)</label><input class="form-control" placeholder="separa las fichas con comas">
+        <label>Respuestas válidas</label><div class="respuestas-validas"></div>
+        <button class="enlace-editor" type="button" data-agregar-respuesta>+ agregar respuesta válida</button>
+    </article>
+</template>
+{% endblock %}
+
+{% block page_js %}
+<script>
+// Atiendo los controles del editor para añadir preguntas y respuestas sin publicar datos.
+document.addEventListener('click', (evento) => {
+    const botonRespuesta = evento.target.closest('[data-agregar-respuesta]');
+    if (botonRespuesta) {
+        const contenedor = botonRespuesta.parentElement.querySelector('.respuestas-validas');
+        const respuesta = document.createElement('input');
+        respuesta.className = 'form-control';
+        respuesta.placeholder = 'Escribe una respuesta válida';
+        contenedor.appendChild(respuesta);
+    }
+    if (evento.target.id === 'agregarPregunta') {
+        const plantilla = document.getElementById('plantillaPregunta').content.cloneNode(true);
+        const numero = document.querySelectorAll('[data-pregunta]').length + 1;
+        plantilla.querySelector('h3').textContent = `Pregunta ${numero}`;
+        plantilla.querySelector('select').setAttribute('aria-label', `Tipo de pregunta ${numero}`);
+        document.getElementById('listaPreguntas').appendChild(plantilla);
+    }
+});
+</script>
+{% endblock %}

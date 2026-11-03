@@ -5,6 +5,8 @@
    estado: 'entregada' | 'tardia' | 'calificada' | 'sin_entregar'.
    seleccionada: estudiante, estado, contenido, nota, observaciones (puede ser None). #}
 {% block title %}Entregas - {{ actividad.titulo }} - Da Vinci{% endblock %}
+{% load static %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/revision_cuestionario.css' %}">{% endblock %}
 {% block docente_nav %}{% include 'components/docente_nav.html' with active_rail='tareas' nav_url_name='docente_actividades' %}{% endblock %}
 {% block subtitulo %}{{ actividad.titulo }} · entregas y calificación{% endblock %}
 {% block tabs %}{% include 'components/curso_tabs.html' with tab_activa='tareas' %}{% endblock %}
@@ -53,6 +55,14 @@
     <section class="panel-card">
         {% if seleccionada %}
         <h5 class="panel-title">Calificar: {{ seleccionada.estudiante.usuario.nombres }} {{ seleccionada.estudiante.usuario.ap_pat }}</h5>
+        {% if actividad.tipo == 'cuestionario' and actividad.usa_ia %}
+        <div class="revision-cuestionario"><h6>Entrega de {{ seleccionada.estudiante.usuario.nombres }} {{ seleccionada.estudiante.usuario.ap_pat }}</h6>
+            <div class="revision-pregunta"><strong>Pregunta 1</strong><span class="estado-variante">Variante válida</span><p>Every day she walks to school</p></div>
+            <div class="revision-pregunta"><strong>Pregunta 2</strong><span class="estado-error">Error</span><p>She walk to school every day</p></div>
+            <div class="revision-pregunta"><strong>Pregunta 3</strong><span class="estado-correcto">Correcto</span><p>she walks to school every day</p></div>
+        </div>
+        {% endif %}
+        {% if actividad.tipo == 'cuestionario' and actividad.usa_ia %}<div class="respuestas-aceptadas"><strong>Respuestas aceptadas por la IA</strong><br>Pregunta 1: «Every day she walks to school» se aceptó como variante válida.<br><a href="#" onclick="return false;">Agregar a mis respuestas válidas</a></div>{% endif %}
         <form method="post" action="{% url 'docente_entregas' curso.id_curso actividad.pk %}">
             {% csrf_token %}
             <input type="hidden" name="estudiante" value="{{ seleccionada.estudiante.pk }}">

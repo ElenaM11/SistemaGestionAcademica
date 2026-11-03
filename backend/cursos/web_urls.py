@@ -9,6 +9,7 @@ from .page_views import (
     asignar_docente_pagina, catalogo_cursos_pagina, catalogos_pagina,
     estudiantes_curso_pagina, inscripciones_pagina, paralelos_pagina,
     modulo_estudiante, progreso_docente_pagina, resumen_admin_pagina,
+    cuestionario_estudiante_pagina,
 )
 
 
@@ -22,6 +23,7 @@ urlpatterns = [
     path('admin/cursos/inscripciones/', inscripciones_pagina, name='admin_inscripciones'),
     path('docente/cursos/<int:curso_id>/estudiantes/', estudiantes_curso_pagina, name='docente_estudiantes_curso'),
     path('estudiante/academico/', modulo_estudiante, name='estudiante_academico'),
+    path('estudiante/cuestionario/<int:actividad_id>/', cuestionario_estudiante_pagina, name='estudiante_cuestionario'),
     path('docente/progreso/', progreso_docente_pagina, name='docente_progreso'),
     path('admin/resumen-academico/', resumen_admin_pagina, name='admin_resumen_academico'),
 ]

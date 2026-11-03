@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.dateparse import parse_time
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
+from actividades.models import Actividad
 
 from usuarios.models import Docente, Estudiante, Usuario
 
@@ -60,6 +61,39 @@ def modulo_estudiante(request):
     return render(request, 'estudiante/academico.html', {
         'usuario': usuario, 'paralelos': paralelos, 'paralelo': paralelo,
         'vista': vista, 'active_tab': 'tareas' if vista == 'tareas' else 'cursos',
+    })
+
+
+def cuestionario_estudiante_pagina(request, actividad_id):
+    """Muestro el cuestionario habilitado para el estudiante inscrito en la actividad."""
+    usuario, respuesta = validar_rol_pagina(request, 'Estudiante')
+    if respuesta:
+        return respuesta
+    estudiante = get_object_or_404(Estudiante, pk=usuario.pk)
+    actividad = get_object_or_404(
+        Actividad.objects.select_related('paralelo__curso'), pk=actividad_id,
+        tipo=Actividad.Tipo.CUESTIONARIO, usa_ia=True,
+    )
+    if not EstudianteParalelo.objects.filter(
+        estudiante=estudiante, paralelo=actividad.paralelo, estado='ACTIVO'
+    ).exists():
+        return HttpResponseForbidden('No tienes acceso a este cuestionario.')
+    try:
+        pregunta = int(request.GET.get('pregunta', '1'))
+    except (TypeError, ValueError):
+        pregunta = 1
+    if pregunta not in (1, 2, 3, 4, 5):
+        pregunta = 1
+    paralelos = Paralelo.objects.filter(
+        inscripciones__estudiante=estudiante, inscripciones__estado='ACTIVO', estado='ACTIVO'
+    ).select_related('curso__idioma', 'curso__nivel', 'turno').distinct().order_by('curso__nombre')
+    return render(request, 'estudiante/cuestionario.html', {
+        'usuario': usuario,
+        'actividad': actividad,
+        'paralelos': paralelos,
+        'pregunta': pregunta,
+        'avance': pregunta * 20,
+        'active_tab': 'tareas',
     })
 
 
