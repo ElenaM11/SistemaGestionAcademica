@@ -18,6 +18,8 @@ from .services import (
     habilitar_idioma_docente, retirar_inscripcion,
 )
 
+from asistente_ia.cuestionario import preguntas_publicas
+from asistente_ia.persistencia import intentos_por_pregunta
 
 def registrar_error_pagina(request, error):
     """Muestro errores de validación con mensajes legibles en español."""
@@ -64,37 +66,41 @@ def modulo_estudiante(request):
     })
 
 
+
+
 def cuestionario_estudiante_pagina(request, actividad_id):
-    """Muestro el cuestionario habilitado para el estudiante inscrito en la actividad."""
     usuario, respuesta = validar_rol_pagina(request, 'Estudiante')
     if respuesta:
         return respuesta
     estudiante = get_object_or_404(Estudiante, pk=usuario.pk)
+    
     actividad = get_object_or_404(
-        Actividad.objects.select_related('paralelo__curso'), pk=actividad_id,
-        tipo=Actividad.Tipo.CUESTIONARIO, usa_ia=True,
+        Actividad.objects.select_related('paralelo__curso'),
+        pk=actividad_id,
+        tipo__in=[Actividad.Tipo.CUESTIONARIO, Actividad.Tipo.ORDENAR],
     )
+    
     if not EstudianteParalelo.objects.filter(
         estudiante=estudiante, paralelo=actividad.paralelo, estado='ACTIVO'
     ).exists():
         return HttpResponseForbidden('No tienes acceso a este cuestionario.')
-    try:
-        pregunta = int(request.GET.get('pregunta', '1'))
-    except (TypeError, ValueError):
-        pregunta = 1
-    if pregunta not in (1, 2, 3, 4, 5):
-        pregunta = 1
+        
     paralelos = Paralelo.objects.filter(
         inscripciones__estudiante=estudiante, inscripciones__estado='ACTIVO', estado='ACTIVO'
     ).select_related('curso__idioma', 'curso__nivel', 'turno').distinct().order_by('curso__nombre')
-    return render(request, 'estudiante/cuestionario.html', {
+    
+    ctx = {
         'usuario': usuario,
         'actividad': actividad,
         'paralelos': paralelos,
-        'pregunta': pregunta,
-        'avance': pregunta * 20,
         'active_tab': 'tareas',
-    })
+        'preguntas_publicas': preguntas_publicas(actividad.cuestionario),
+        'intentos': intentos_por_pregunta(request, actividad, estudiante),
+        'max_intentos': 3,
+        'ia_habilitada': actividad.usa_ia,
+    }
+    
+    return render(request, 'estudiante/cuestionario_ia.html', ctx)
 
 
 def progreso_docente_pagina(request):

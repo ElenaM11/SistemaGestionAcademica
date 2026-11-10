@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ actividad.titulo }} - Da Vinci{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/cuestionario.css?v=2">{% endblock %}
+{% block content %}
+{% include 'components/topbar.html' with user_name=usuario.nombres user_role='Estudiante' initials=usuario.iniciales show_search=False %}
+{% include 'components/estudiante_nav.html' with active_rail='tareas' %}
+
+<main class="app-main cuestionario-main">
+    <div class="cuestionario-contenido">
+        <a class="volver-tareas" href="{% url 'estudiante_academico' %}?vista=tareas"><i class="bi bi-arrow-left"></i> Volver a mis tareas</a>
+        <header class="cuestionario-banner">
+            <h1>{{ actividad.titulo }}</h1>
+            <p>{{ actividad.instrucciones|default:"Completa las preguntas y envía tu tarea." }}</p>
+        </header>
+
+        {% if not ia_habilitada %}
+        <div class="alert alert-warning">
+            <i class="bi bi-info-circle"></i> Esta actividad no tiene habilitado el apoyo de IA. Las respuestas están deshabilitadas. Tu docente calificará manualmente.
+        </div>
+        {% endif %}
+
+        <div id="iaCuestionario" class="ia-cuestionario"
+             data-url-verificar="{% url 'estudiante_cuestionario_verificar' actividad.id %}"
+             data-url-revisar="{% url 'estudiante_cuestionario_revisar_texto' %}"
+             data-csrf="{{ csrf_token }}" data-ia="{{ ia_habilitada|yesno:'true,false' }}">
+          <div id="iaPreguntas"></div>
+        </div>
+
+        {% if ia_habilitada %}
+        <div class="d-flex justify-content-end mt-4 mb-5">
+            <button type="button" class="btn btn-primary-custom btn-pill-lg" id="btnEnviarEntrega">Enviar tarea al docente</button>
+        </div>
+        {% endif %}
+    </div>
+</main>
+
+{{ preguntas_publicas|json_script:"datosPreguntas" }}
+{{ intentos|json_script:"datosIntentos" }}
+
+<style>
+  .ia-card{border:1px solid #dcdfe6;border-radius:10px;padding:16px;margin-bottom:16px;background:#fff}
+  .ia-card h4{margin:0 0 10px;font-size:1rem}
+  .ia-card textarea{width:100%;min-height:70px;padding:8px;border:1px solid #c9ccd3;border-radius:8px}
+  .ia-fichas,.ia-armada{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;min-height:38px}
+  .ia-armada{border:1px dashed #9aa0ac;border-radius:8px;padding:6px}
+  .ia-ficha{border:1px solid #6b7280;background:#f3f4f6;border-radius:16px;padding:4px 12px;cursor:pointer}
+  .ia-btn{padding:8px 16px;border:0;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;margin-top: 10px;}
+  .ia-btn[disabled]{opacity:.5;cursor:not-allowed}
+  .ia-res{margin-top:12px;padding:12px;border-radius:8px}
+  .ia-res.ok{background:#e8f7ee;border:1px solid #2e9e5b}
+  .ia-res.var{background:#eef4ff;border:1px solid #2563eb}
+  .ia-res.err{background:#fff4e5;border:1px solid #e08a00}
+  .ia-res.aviso{background:#f3f4f6;border:1px solid #9aa0ac}
+</style>
+
+<script>
+(function () {
+  var raiz = document.getElementById('iaCuestionario');
+  if (!raiz) return;
+  var ia_habilitada = raiz.dataset.ia === 'true';
+  var preguntas = JSON.parse(document.getElementById('datosPreguntas').textContent);
+  var intentos = JSON.parse(document.getElementById('datosIntentos').textContent);
+  var cont = document.getElementById('iaPreguntas');
+  var respuestasEstudiante = {};
+
+  function el(tag, cls, txt) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+  function linea(padre, etiqueta, valor) {
+    if (!valor) return;
+    var p = el('p');
+    p.style.marginBottom = '4px';
+    p.appendChild(el('strong', null, etiqueta + ' '));
+    p.appendChild(document.createTextNode(valor));
+    padre.appendChild(p);
+  }
+
+  preguntas.forEach(function (q, i) {
+    var n = i + 1;
+    var usados = parseInt(intentos[n] || 0, 10);
+    var card = el('div', 'ia-card');
+    card.appendChild(el('h4', null, n + '. ' + q.enunciado));
+    var entrada, armada, leer;
+
+    if (q.tipo === 'ordenar') {
+      armada = el('div', 'ia-armada');
+      var fichas = el('div', 'ia-fichas');
+      var orden = q.palabras.map(function (_, k) { return k; }).sort(function () { return Math.random() - 0.5; });
+      orden.forEach(function (k) {
+        var f = el('button', 'ia-ficha', q.palabras[k]);
+        f.type = 'button';
+        if (!ia_habilitada) { f.disabled = true; }
+        f.onclick = function () {
+          if (!ia_habilitada) return;
+          (f.parentNode === fichas ? armada : fichas).appendChild(f);
+        };
+        fichas.appendChild(f);
+      });
+      card.appendChild(armada); card.appendChild(fichas);
+      leer = function () { return Array.prototype.map.call(armada.children, function (c) { return c.textContent; }).join(' '); };
+      entrada = { total: q.palabras.length, armada: armada };
+    } else {
+      var ta = el('textarea'); ta.maxLength = 300;
+      ta.placeholder = 'Escribe tu respuesta';
+      if (!ia_habilitada) { ta.disabled = true; }
+      card.appendChild(ta);
+
+      var ltBox = el('div', 'lt-sugerencias');
+      ltBox.style.fontSize = '0.85rem';
+      ltBox.style.color = '#d97706';
+      ltBox.style.marginTop = '5px';
+      card.appendChild(ltBox);
+
+      var timeoutLT = null;
+      ta.addEventListener('input', function() {
+        if (!ia_habilitada) return;
+        clearTimeout(timeoutLT);
+        ltBox.innerHTML = '';
+
+        var texto = ta.value.trim();
+        if (texto.length < 3) return;
+
+        timeoutLT = setTimeout(function() {
+          fetch(raiz.dataset.urlRevisar, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': raiz.dataset.csrf},
+            body: JSON.stringify({
+                texto: texto,
+                idioma: "{{ actividad.paralelo.curso.idioma.codigo|default:'EN' }}"
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.matches && data.matches.length > 0) {
+              var error = data.matches[0];
+              var msg = document.createTextNode("Posible error: ");
+              var sug = document.createElement('strong');
+              sug.textContent = error.replacements.length > 0 ? error.replacements[0].value : "Revisa esta palabra";
+
+              ltBox.appendChild(msg);
+              ltBox.appendChild(sug);
+              ltBox.appendChild(document.createTextNode(" (" + error.message + ")"));
+            }
+          }).catch(e => console.log('Error LT:', e));
+        }, 1000);
+      });
+
+      leer = function () { return ta.value.trim(); };
+    }
+
+    var btn = el('button', 'ia-btn', 'Verificar'); btn.type = 'button';
+    var salida = el('div');
+
+    if (usados >= 1 || !ia_habilitada) btn.disabled = true;
+    if (!ia_habilitada) btn.style.display = 'none';
+
+    function actualizarRespuesta() {
+        respuestasEstudiante[n] = { numero: n, tipo: q.tipo, enunciado: q.enunciado, respuesta: leer() };
+    }
+
+    btn.onclick = function () {
+      var r = leer();
+      salida.textContent = '';
+      if (!r || (entrada && entrada.armada.children.length !== entrada.total)) {
+        var a = el('div', 'ia-res aviso', q.tipo === 'ordenar' ? 'Usa todas las fichas.' : 'Escribe tu respuesta.');
+        salida.appendChild(a); return;
+      }
+      btn.disabled = true; btn.textContent = 'Verificando…';
+      actualizarRespuesta();
+
+      fetch(raiz.dataset.urlVerificar, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': raiz.dataset.csrf},
+        body: JSON.stringify({pregunta: n, respuesta: r})
+      }).then(function (resp) {
+        return resp.json().then(function (d) { return {ok: resp.ok, d: d}; });
+      }).then(function (x) {
+        var d = x.d, caja;
+        if (!x.ok) {
+          caja = el('div', 'ia-res aviso', d.mensaje || 'No se pudo verificar.');
+        } else {
+          respuestasEstudiante[n].veredicto = d.veredicto;
+          respuestasEstudiante[n].explicacion = d.explicacion;
+          respuestasEstudiante[n].esperada = d.esperada;
+
+          if (d.veredicto === 'correcto') {
+            caja = el('div', 'ia-res ok', '¡Correcto!');
+          } else if (d.veredicto === 'variante_valida') {
+            caja = el('div', 'ia-res var');
+            caja.appendChild(el('p', null, 'Tu respuesta es válida.'));
+            linea(caja, 'Explicación:', d.explicacion);
+            linea(caja, 'Tu docente esperaba:', d.esperada);
+          } else {
+            caja = el('div', 'ia-res err');
+            linea(caja, 'Tipo de error:', d.tipo_error);
+            linea(caja, 'Corrección:', d.correccion);
+            linea(caja, 'Explicación:', d.explicacion);
+          }
+        }
+        salida.appendChild(caja);
+      }).catch(function () {
+        salida.appendChild(el('div', 'ia-res aviso', 'Error de conexión. Intenta de nuevo.'));
+        btn.disabled = false;
+      }).then(function () {
+        if (x && x.ok) {
+            btn.textContent = 'Verificado';
+        } else {
+            btn.textContent = 'Verificar';
+        }
+      });
+    };
+
+    card.appendChild(btn); card.appendChild(salida);
+    cont.appendChild(card);
+  });
+
+  document.getElementById('btnEnviarEntrega')?.addEventListener('click', function() {
+    var btn = this;
+    btn.disabled = true; btn.textContent = 'Enviando...';
+
+    var datosParaEnviar = {
+        tipo: '{{ actividad.tipo }}',
+        respuestas: Object.values(respuestasEstudiante)
+    };
+
+    var formData = new FormData();
+    formData.append('contenido_texto', JSON.stringify(datosParaEnviar));
+
+    fetch('/api/estudiante/actividades/{{ actividad.id }}/entregar/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': raiz.dataset.csrf},
+        body: formData
+    }).then(function(r) {
+        if (r.ok) {
+            window.location.href = "{% url 'estudiante_academico' %}?vista=tareas";
+        } else {
+            return r.json().then(function(e) {
+                alert("Error al enviar: " + (e.detail || JSON.stringify(e)));
+                btn.disabled = false; btn.textContent = 'Enviar tarea al docente';
+            });
+        }
+    }).catch(function() {
+        alert("Error de red al enviar la tarea.");
+        btn.disabled = false; btn.textContent = 'Enviar tarea al docente';
+    });
+  });
+
+})();
+</script>
+{% endblock %}

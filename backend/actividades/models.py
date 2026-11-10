@@ -5,16 +5,16 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 
 def _aware(dt):
-
     if dt is not None and timezone.is_naive(dt) and settings.USE_TZ:
         return timezone.make_aware(dt, dt_timezone.utc)
     return dt
 
 class Actividad(models.Model):
-    class Tipo(models.TextChoices):  # valores que envía el desplegable de la plantilla
+    class Tipo(models.TextChoices):
         ESCRITA = "escrita", "Escrita"
         ORAL = "oral", "Oral"
         CUESTIONARIO = "cuestionario", "Cuestionario"
+        ORDENAR = "ordenar", "Ordenar"
 
     class Estado(models.TextChoices):
         ACTIVA = "ACTIVA", "Activa"
@@ -38,6 +38,7 @@ class Actividad(models.Model):
         max_digits=5, decimal_places=2, blank=True, null=True, db_column="puntajemaximo"
     )
     permite_entrega_tardia = models.BooleanField(default=False, db_column="permiteentregatardia")
+    cuestionario = models.TextField(null=True, blank=True, db_column="cuestionario")
     usa_ia = models.BooleanField(default=False, db_column="usaia")
     estado = models.CharField(max_length=30, choices=Estado.choices, default=Estado.ACTIVA)
 
@@ -50,10 +51,22 @@ class Actividad(models.Model):
             raise ValidationError("El puntaje máximo debe ser mayor a 0.")
         if self.docente_id and self.paralelo_id and self.paralelo.docente_id != self.docente_id:
             raise ValidationError("El docente no está asignado a este paralelo.")
+            
+        # Solo validamos el cuestionario si ya tiene contenido
+        if self.cuestionario:
+            from asistente_ia.cuestionario import parsear_y_validar, CuestionarioInvalido
+            try:
+                preguntas = parsear_y_validar(self.cuestionario, usa_ia=self.usa_ia)
+                if self.tipo == self.Tipo.ORDENAR:
+                    if any(p['tipo'] != 'ordenar' for p in preguntas):
+                        raise ValidationError("Una actividad de tipo 'Ordenar' solo admite preguntas de ordenar.")
+            except CuestionarioInvalido as e:
+                raise ValidationError(str(e))
 
     def esta_vencida(self, ahora=None):
         limite = _aware(self.fecha_limite)
         return limite is not None and (ahora or timezone.now()) > limite
+
     def acepta_entregas(self, ahora=None):
         if self.estado != self.Estado.ACTIVA:
             return False
@@ -94,7 +107,6 @@ class Entrega(models.Model):
         db_table = "entrega"
 
     def calificar(self, docente, nota, observaciones=""):
-        """HU-15: registra o MODIFICA la calificación y las observaciones."""
         if self.actividad.paralelo.docente_id != docente.pk:
             raise PermissionDenied("Solo el docente del paralelo puede calificar.")
         maximo = self.actividad.puntaje_maximo

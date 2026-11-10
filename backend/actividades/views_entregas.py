@@ -1,4 +1,5 @@
 import os
+import json
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -7,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from usuarios.contexto import contexto_curso, inscripciones_activas, texto_error
 from usuarios.decorators import docente_requerido
+from usuarios.models import Estudiante
 from .models import Actividad, Entrega
 
 def _estado(entrega):
@@ -14,7 +16,20 @@ def _estado(entrega):
         return "sin_entregar"
     if entrega.estado == Entrega.Estado.CALIFICADA:
         return "calificada"
+    if not entrega.contenido_texto and not entrega.archivo:
+        return "sin_entregar"
     return "tardia" if entrega.es_tardia else "entregada"
+
+def _parsear_feedback(contenido):
+    if not contenido:
+        return None
+    try:
+        datos = json.loads(contenido)
+        if isinstance(datos, dict) and "respuestas" in datos:
+            return datos.get("respuestas")
+    except Exception:
+        pass
+    return None
 
 @docente_requerido
 def docente_entregas(request, curso_id, pk):
@@ -31,9 +46,17 @@ def docente_entregas(request, curso_id, pk):
     if request.method == "POST":
         elegido = request.POST.get("estudiante")
         entrega = entregas_db.get(int(elegido)) if elegido and elegido.isdigit() else None
-        if entrega is None:
-            error = "Ese estudiante aún no entregó la actividad."
-        else:
+        
+        # Si no hay entrega, permitimos crear una vacía si el docente decide calificar
+        if entrega is None and elegido and elegido.isdigit():
+            est_obj = Estudiante.objects.filter(pk=int(elegido)).first()
+            if est_obj:
+                entrega = Entrega(actividad=actividad, estudiante=est_obj)
+                entrega.save()
+        elif entrega is None:
+            error = "Selecciona un estudiante válido."
+
+        if not error:
             try:
                 nota = Decimal((request.POST.get("nota") or "").strip())
                 if not nota.is_finite():
@@ -56,16 +79,18 @@ def docente_entregas(request, curso_id, pk):
         estado = _estado(entrega)
         filas.append({
             "estudiante": ins.estudiante,
-            "fecha_entrega": entrega.fecha_entrega if entrega else None,
+            "fecha_entrega": entrega.fecha_entrega if entrega and estado != "sin_entregar" else None,
             "estado": estado,
             "nota": entrega.calificacion if entrega else None,
         })
         if elegido and str(ins.estudiante_id) == str(elegido):
+            feedback = _parsear_feedback(entrega.contenido_texto) if entrega else None
             seleccionada = {
                 "estudiante": ins.estudiante,
                 "estado": estado,
                 "entrega_id": entrega.pk if entrega else None,
-                "contenido": entrega.contenido_texto if entrega else None,
+                "contenido": entrega.contenido_texto if entrega and not feedback else None,
+                "feedback": feedback,
                 "tiene_archivo": bool(entrega and entrega.archivo),
                 "nota": entrega.calificacion if entrega else None,
                 "observaciones": entrega.observaciones if entrega else None,
@@ -77,7 +102,6 @@ def docente_entregas(request, curso_id, pk):
         total_sin_entregar=sum(1 for f in filas if f["estado"] == "sin_entregar"),
     )
     return render(request, "docente/entregas_calificar.html", ctx)
-
 
 @docente_requerido
 def docente_entrega_archivo(request, curso_id, pk, entrega_id):

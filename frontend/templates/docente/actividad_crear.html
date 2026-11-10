@@ -1,10 +1,4 @@
 {% extends 'docente/curso_base.html' %}
-{% comment %}
-  Tareas del curso (HU-11 / HU-14): lista de actividades publicadas y un boton "Nueva actividad"
-  que abre el formulario en una ventana (modal).
-  Contexto: actividades (titulo, tipo, fecha_limite, usa_ia, entregadas, editable),
-  cantidad_estudiantes, error (opcional).
-{% endcomment %}
 {% block title %}Tareas - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
 {% block docente_nav %}{% include 'components/docente_nav.html' with active_rail='tareas' nav_url_name='docente_actividades' %}{% endblock %}
 {% block subtitulo %}Crea y publica actividades para tus estudiantes{% endblock %}
@@ -50,6 +44,12 @@
                     </td>
                     <td class="text-nowrap">
                         <div class="material-actions">
+                            {% if a.tipo == 'cuestionario' or a.tipo == 'ordenar' %}
+                                {% if a.usa_ia %}
+                                <a href="{% url 'docente_cuestionario_crear' curso.id_curso a.pk %}" class="fw-bold" style="color: var(--color-orange);">Preguntas</a>
+                                <span aria-hidden="true">·</span>
+                                {% endif %}
+                            {% endif %}
                             <a href="{% url 'docente_entregas' curso.id_curso a.pk %}">Ver entregas</a>
                             {% if a.editable %}
                             <span aria-hidden="true">·</span>
@@ -98,10 +98,11 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label" for="tipo">Tipo</label>
-                            <select class="form-select" id="tipo" name="tipo" data-cuestionario-url="{% url 'docente_cuestionario_crear' curso.id_curso %}">
+                            <select class="form-select" id="tipo" name="tipo">
                                 <option value="escrita" {% if request.POST.tipo == 'escrita' %}selected{% endif %}>Escrita</option>
                                 <option value="oral" {% if request.POST.tipo == 'oral' %}selected{% endif %}>Oral</option>
                                 <option value="cuestionario" {% if request.POST.tipo == 'cuestionario' %}selected{% endif %}>Cuestionario</option>
+                                <option value="ordenar" {% if request.POST.tipo == 'ordenar' %}selected{% endif %}>Ordenar</option>
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -144,7 +145,6 @@
 (function () {
     var modal = document.getElementById('modalActividad');
     if (!modal) { return; }
-    // Se mueve al <body> para que ninguna barra fija quede por encima de la ventana.
     document.body.appendChild(modal);
     modal.addEventListener('shown.bs.modal', function () {
         var titulo = document.getElementById('titulo');
@@ -154,12 +154,5 @@
     bootstrap.Modal.getOrCreateInstance(modal).show();
     {% endif %}
 })();
-// Redirijo al editor de preguntas cuando el docente elige el tipo cuestionario.
-var selectorTipoActividad = document.getElementById('tipo');
-selectorTipoActividad?.addEventListener('change', function () {
-    if (selectorTipoActividad.value === 'cuestionario') {
-        window.location.href = selectorTipoActividad.dataset.cuestionarioUrl;
-    }
-});
 </script>
 {% endblock %}

@@ -1,9 +1,4 @@
 {% extends 'docente/curso_base.html' %}
-{# Pantalla 06: entregas y calificacion.
-   Contexto: actividad (titulo, puntaje_maximo), entregas, total_entregadas, total_sin_entregar, seleccionada.
-   Cada item de entregas: estudiante (pk, usuario.nombres, usuario.ap_pat), fecha_entrega, estado, nota.
-   estado: 'entregada' | 'tardia' | 'calificada' | 'sin_entregar'.
-   seleccionada: estudiante, estado, contenido, nota, observaciones (puede ser None). #}
 {% block title %}Entregas - {{ actividad.titulo }} - Da Vinci{% endblock %}
 {% load static %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/revision_cuestionario.css' %}">{% endblock %}
@@ -55,14 +50,22 @@
     <section class="panel-card">
         {% if seleccionada %}
         <h5 class="panel-title">Calificar: {{ seleccionada.estudiante.usuario.nombres }} {{ seleccionada.estudiante.usuario.ap_pat }}</h5>
-        {% if actividad.tipo == 'cuestionario' and actividad.usa_ia %}
-        <div class="revision-cuestionario"><h6>Entrega de {{ seleccionada.estudiante.usuario.nombres }} {{ seleccionada.estudiante.usuario.ap_pat }}</h6>
-            <div class="revision-pregunta"><strong>Pregunta 1</strong><span class="estado-variante">Variante válida</span><p>Every day she walks to school</p></div>
-            <div class="revision-pregunta"><strong>Pregunta 2</strong><span class="estado-error">Error</span><p>She walk to school every day</p></div>
-            <div class="revision-pregunta"><strong>Pregunta 3</strong><span class="estado-correcto">Correcto</span><p>she walks to school every day</p></div>
+        {% if seleccionada.feedback %}
+        <div class="revision-cuestionario">
+            <h6>Resumen de respuestas</h6>
+            {% for f in seleccionada.feedback %}
+            <div class="revision-pregunta" style="margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
+                <strong>Pregunta {{ f.numero }}</strong>
+                {% if f.veredicto == 'correcto' %}<span class="estado-correcto">Correcto</span>
+                {% elif f.veredicto == 'variante_valida' %}<span class="estado-variante">Variante válida</span>
+                {% else %}<span class="estado-error">Error</span>{% endif %}
+                <p class="mb-1"><strong>Estudiante escribió:</strong> {{ f.respuesta }}</p>
+                {% if f.esperada %}<p class="mb-1 text-muted"><strong>Esperado:</strong> {{ f.esperada }}</p>{% endif %}
+                {% if f.explicacion %}<p class="mb-0 small text-muted">{{ f.explicacion }}</p>{% endif %}
+            </div>
+            {% endfor %}
         </div>
         {% endif %}
-        {% if actividad.tipo == 'cuestionario' and actividad.usa_ia %}<div class="respuestas-aceptadas"><strong>Respuestas aceptadas por la IA</strong><br>Pregunta 1: «Every day she walks to school» se aceptó como variante válida.<br><a href="#" onclick="return false;">Agregar a mis respuestas válidas</a></div>{% endif %}
         <form method="post" action="{% url 'docente_entregas' curso.id_curso actividad.pk %}">
             {% csrf_token %}
             <input type="hidden" name="estudiante" value="{{ seleccionada.estudiante.pk }}">
@@ -79,16 +82,14 @@
             </div>
             <div class="mb-3">
                 <label class="form-label" for="nota">Calificación (sobre {{ actividad.puntaje_maximo }})</label>
-                <input class="form-control" type="number" id="nota" name="nota" min="0" max="{{ actividad.puntaje_maximo }}" step="0.5"
-                       value="{{ seleccionada.nota|default_if_none:'' }}" {% if seleccionada.estado == 'sin_entregar' %}disabled{% endif %}>
+                <input class="form-control" type="number" id="nota" name="nota" min="0" max="{{ actividad.puntaje_maximo }}" step="0.5" value="{{ seleccionada.nota|default_if_none:'' }}">
             </div>
             <div class="mb-3">
                 <label class="form-label" for="observaciones">Observaciones</label>
-                <textarea class="form-control" id="observaciones" name="observaciones" rows="2"
-                          {% if seleccionada.estado == 'sin_entregar' %}disabled{% endif %}>{{ seleccionada.observaciones|default:'' }}</textarea>
+                <textarea class="form-control" id="observaciones" name="observaciones" rows="2">{{ seleccionada.observaciones|default:'' }}</textarea>
             </div>
             <div class="form-actions">
-                <button class="btn btn-primary-custom btn-pill-lg" type="submit" {% if seleccionada.estado == 'sin_entregar' %}disabled{% endif %}>Guardar calificación</button>
+                <button class="btn btn-primary-custom btn-pill-lg" type="submit">Guardar calificación</button>
             </div>
         </form>
         {% else %}

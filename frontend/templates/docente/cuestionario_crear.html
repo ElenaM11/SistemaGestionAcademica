@@ -1,62 +1,32 @@
 {% extends 'docente/curso_base.html' %}
 {% load static %}
-{% block title %}Crear cuestionario - Da Vinci{% endblock %}
+{% block title %}Preguntas - {{ actividad.titulo }} - Da Vinci{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/cuestionario_docente.css' %}">{% endblock %}
 {% block docente_nav %}{% include 'components/docente_nav.html' with active_rail='tareas' nav_url_name='docente_actividades' %}{% endblock %}
-{% block subtitulo %}Cuestionario con las respuestas válidas del docente{% endblock %}
+{% block subtitulo %}Editor de preguntas: {{ actividad.titulo }}{% endblock %}
 {% block tabs %}{% include 'components/curso_tabs.html' with tab_activa='tareas' %}{% endblock %}
 
 {% block curso_contenido %}
 <section class="editor-cuestionario">
     <div class="editor-columna-principal">
-        <form class="panel-card editor-form" id="formCuestionario" method="post" action="{% url 'docente_actividades' curso.id_curso %}">
+        <form class="panel-card editor-form" id="formCuestionario" method="post" action="{% url 'docente_cuestionario_crear' curso.id_curso actividad.pk %}">
             {% csrf_token %}
-            <input type="hidden" name="tipo" value="cuestionario">
-            <h2>Nueva tarea</h2>
-            <label for="tituloCuestionario">Título</label>
-            <input id="tituloCuestionario" class="form-control" name="titulo" maxlength="200" value="Present simple: cuestionario" required>
+            <input type="hidden" name="cuestionario" id="cuestionarioHidden">
+            
+            <h2>Preguntas de la actividad</h2>
+            <p class="text-muted">Tipo de actividad: <strong>{{ actividad.get_tipo_display }}</strong></p>
 
-            <div class="editor-dos-columnas">
-                <div><label for="fechaLimiteCuestionario">Fecha límite</label><input id="fechaLimiteCuestionario" class="form-control" name="fecha_limite" type="date" required></div>
-                <div><label for="puntajeCuestionario">Puntaje máximo</label><input id="puntajeCuestionario" class="form-control" name="puntaje_maximo" type="number" min="1" max="999" value="10" required></div>
+            {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+            <div id="listaPreguntas" class="mt-4">
+                <!-- Las preguntas se inyectan aquí con JS -->
             </div>
 
-            <div class="switch-row editor-switch">
-                <label for="apoyoIaCuestionario">Usar apoyo de IA</label>
-                <input id="apoyoIaCuestionario" class="form-check-input" name="asistente_ia" type="checkbox" role="switch" checked>
-            </div>
-            <p class="editor-ayuda">Los estudiantes podrán verificar cada respuesta. La IA interviene solo si no coincide con las tuyas, con un máximo de 3 intentos por pregunta.</p>
-
-            <div id="listaPreguntas">
-                <article class="pregunta-editor" data-pregunta>
-                    <div class="pregunta-cabecera"><h3>Pregunta 1</h3><select class="form-select" aria-label="Tipo de pregunta 1"><option>Escribir</option><option>Ordenar</option></select></div>
-                    <label>Enunciado</label><input class="form-control" value="Traduce: Ella camina a la escuela todos los días.">
-                    <label>Respuestas válidas</label>
-                    <div class="respuestas-validas"><input class="form-control" value="She walks to school every day"><input class="form-control" value="Every day she walks to school"></div>
-                    <button class="enlace-editor" type="button" data-agregar-respuesta>+ agregar respuesta válida</button>
-                </article>
-
-                <article class="pregunta-editor" data-pregunta>
-                    <div class="pregunta-cabecera"><h3>Pregunta 2</h3><select class="form-select" aria-label="Tipo de pregunta 2"><option>Ordenar</option><option>Escribir</option></select></div>
-                    <label>Enunciado</label><input class="form-control" value="Ordena la oración.">
-                    <label>Palabras o frases (fichas)</label><div class="fichas"><span>she</span><span>walks</span><span>to school</span><span>every</span><span>day</span></div>
-                    <label>Respuestas válidas</label><div class="respuestas-validas"><input class="form-control" value="she walks to school every day"></div>
-                    <button class="enlace-editor" type="button" data-agregar-respuesta>+ agregar respuesta válida</button>
-                </article>
-
-                <article class="pregunta-editor pregunta-incompleta" data-pregunta>
-                    <div class="pregunta-cabecera"><h3>Pregunta 3</h3><select class="form-select" aria-label="Tipo de pregunta 3"><option>Escribir</option><option>Ordenar</option></select></div>
-                    <label>Enunciado</label><input class="form-control" placeholder="Escribe una oración con el verbo study.">
-                    <label>Respuestas válidas</label><div class="respuestas-validas"></div>
-                    <button class="enlace-editor" type="button" data-agregar-respuesta>+ agregar respuesta válida</button>
-                    <p class="error-editor">Agrega al menos una respuesta válida para poder guardar.</p>
-                </article>
-            </div>
-
-            <button class="enlace-editor agregar-pregunta" type="button" id="agregarPregunta">+ Agregar pregunta</button>
-            <div class="form-actions">
+            <button class="enlace-editor agregar-pregunta mt-3" type="button" id="agregarPregunta">+ Agregar pregunta</button>
+            
+            <div class="form-actions mt-4">
                 <a class="btn btn-secondary-custom btn-pill-lg" href="{% url 'docente_actividades' curso.id_curso %}">Cancelar</a>
-                <button class="btn btn-primary-custom btn-pill-lg" type="submit">Publicar tarea</button>
+                <button class="btn btn-primary-custom btn-pill-lg" type="submit">Guardar preguntas</button>
             </div>
         </form>
     </div>
@@ -67,16 +37,39 @@
             <li>El estudiante responde y pulsa Verificar.</li>
             <li>El sistema compara con tus respuestas válidas.</li>
             <li>Si coincide, es correcta y no se usa la IA.</li>
-            <li>Si no coincide, la IA revisa y explica el error.</li>
+            <li>Si no coincide o no hay respuestas válidas, la IA revisa y explica.</li>
+            <li>El estudiante envía la tarea y tú la calificas.</li>
         </ol>
     </aside>
 </section>
+
 <template id="plantillaPregunta">
-    <article class="pregunta-editor" data-pregunta>
-        <div class="pregunta-cabecera"><h3></h3><select class="form-select" aria-label="Tipo de pregunta"><option>Escribir</option><option>Ordenar</option></select></div>
-        <label>Enunciado</label><input class="form-control" placeholder="Escribe el enunciado">
-        <label>Palabras o frases (fichas)</label><input class="form-control" placeholder="separa las fichas con comas">
-        <label>Respuestas válidas</label><div class="respuestas-validas"></div>
+    <article class="pregunta-editor mb-3" data-pregunta>
+        <div class="pregunta-cabecera d-flex justify-content-between align-items-center mb-2">
+            <h3 class="m-0">Pregunta <span class="numero-pregunta"></span></h3>
+            <div class="d-flex gap-2 align-items-center">
+                <select class="form-select form-select-sm tipo-pregunta" style="width: auto;">
+                    <option value="escribir">Escribir</option>
+                    <option value="ordenar">Ordenar</option>
+                </select>
+                <button class="btn btn-sm btn-outline-danger" type="button" data-eliminar-pregunta title="Eliminar pregunta">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+        
+        <label>Enunciado</label>
+        <input class="form-control mb-2 input-enunciado" placeholder="Escribe la instrucción para el estudiante..." required>
+        
+        <div class="bloque-fichas" style="display: none;">
+            <label>Palabras o frases (fichas)</label>
+            <input class="form-control mb-2 input-fichas" placeholder="separa las fichas con comas (ej: she, walks, to school)">
+        </div>
+
+        <label>Respuestas válidas (opcional si usas IA)</label>
+        <div class="respuestas-validas mb-2">
+            <input class="form-control mb-1" placeholder="Escribe una respuesta válida">
+        </div>
         <button class="enlace-editor" type="button" data-agregar-respuesta>+ agregar respuesta válida</button>
     </article>
 </template>
@@ -84,23 +77,148 @@
 
 {% block page_js %}
 <script>
-// Atiendo los controles del editor para añadir preguntas y respuestas sin publicar datos.
-document.addEventListener('click', (evento) => {
-    const botonRespuesta = evento.target.closest('[data-agregar-respuesta]');
-    if (botonRespuesta) {
-        const contenedor = botonRespuesta.parentElement.querySelector('.respuestas-validas');
-        const respuesta = document.createElement('input');
-        respuesta.className = 'form-control';
-        respuesta.placeholder = 'Escribe una respuesta válida';
-        contenedor.appendChild(respuesta);
+document.addEventListener('DOMContentLoaded', function() {
+    const listaPreguntas = document.getElementById('listaPreguntas');
+    const plantilla = document.getElementById('plantillaPregunta');
+    const form = document.getElementById('formCuestionario');
+    const tipoActividad = "{{ actividad.tipo }}";
+
+    // Cargar preguntas existentes si las hay
+    let preguntasExistentes = [];
+    try {
+        const raw = "{{ actividad.cuestionario|escapejs }}";
+        if (raw && raw !== "None") {
+            preguntasExistentes = JSON.parse(raw);
+        }
+    } catch(e) { console.error("Error parseando preguntas", e); }
+
+    function renumerar() {
+        const preguntas = listaPreguntas.querySelectorAll('[data-pregunta]');
+        preguntas.forEach((preg, index) => {
+            preg.querySelector('.numero-pregunta').textContent = index + 1;
+        });
     }
-    if (evento.target.id === 'agregarPregunta') {
-        const plantilla = document.getElementById('plantillaPregunta').content.cloneNode(true);
-        const numero = document.querySelectorAll('[data-pregunta]').length + 1;
-        plantilla.querySelector('h3').textContent = `Pregunta ${numero}`;
-        plantilla.querySelector('select').setAttribute('aria-label', `Tipo de pregunta ${numero}`);
-        document.getElementById('listaPreguntas').appendChild(plantilla);
+
+    function agregarPregunta(data = null) {
+        const clon = plantilla.content.cloneNode(true);
+        const art = clon.querySelector('[data-pregunta]');
+        
+        if (tipoActividad === 'ordenar') {
+            const select = clon.querySelector('.tipo-pregunta');
+            select.value = 'ordenar';
+            select.disabled = true;
+            clon.querySelector('.bloque-fichas').style.display = 'block';
+        }
+
+        if (data) {
+            clon.querySelector('.tipo-pregunta').value = data.tipo || 'escribir';
+            clon.querySelector('.input-enunciado').value = data.enunciado || '';
+            if (data.tipo === 'ordenar') {
+                clon.querySelector('.bloque-fichas').style.display = 'block';
+                clon.querySelector('.input-fichas').value = (data.palabras || []).join(', ');
+            }
+            const contResp = clon.querySelector('.respuestas-validas');
+            contResp.innerHTML = '';
+            (data.validas || []).forEach(v => {
+                const inp = document.createElement('input');
+                inp.className = 'form-control mb-1';
+                inp.value = v;
+                contResp.appendChild(inp);
+            });
+            if ((data.validas || []).length === 0) {
+                const inp = document.createElement('input');
+                inp.className = 'form-control mb-1';
+                contResp.appendChild(inp);
+            }
+        }
+
+        clon.querySelector('.tipo-pregunta').addEventListener('change', function(e) {
+            const bloqueFichas = e.target.closest('[data-pregunta]').querySelector('.bloque-fichas');
+            bloqueFichas.style.display = e.target.value === 'ordenar' ? 'block' : 'none';
+        });
+
+        clon.querySelector('[data-eliminar-pregunta]').addEventListener('click', function(e) {
+            e.target.closest('[data-pregunta]').remove();
+            renumerar();
+        });
+
+        clon.querySelector('[data-agregar-respuesta]').addEventListener('click', function(e) {
+            const contenedor = e.target.closest('[data-pregunta]').querySelector('.respuestas-validas');
+            const input = document.createElement('input');
+            input.className = 'form-control mb-1';
+            input.placeholder = 'Escribe una respuesta válida';
+            contenedor.appendChild(input);
+        });
+
+        listaPreguntas.appendChild(clon);
+        renumerar();
     }
+
+    if (preguntasExistentes.length > 0) {
+        preguntasExistentes.forEach(p => agregarPregunta(p));
+    } else {
+        agregarPregunta();
+    }
+
+    document.getElementById('agregarPregunta').addEventListener('click', () => agregarPregunta());
+
+    form.addEventListener('submit', function(e) {
+        const esUsaIa = "{{ actividad.usa_ia|yesno:'true,false' }}" === 'true';
+        let preguntasArray = [];
+        let hayError = false;
+
+        const preguntasHTML = listaPreguntas.querySelectorAll('[data-pregunta]');
+        
+        if (preguntasHTML.length === 0) {
+            e.preventDefault();
+            alert("Agrega al menos una pregunta.");
+            return;
+        }
+
+        preguntasHTML.forEach(preg => {
+            const tipo = preg.querySelector('.tipo-pregunta').value;
+            const enunciado = preg.querySelector('.input-enunciado').value.trim();
+            
+            let validas = [];
+            preg.querySelectorAll('.respuestas-validas input').forEach(inp => {
+                if (inp.value.trim()) validas.push(inp.value.trim());
+            });
+
+            if (!enunciado) {
+                hayError = true;
+                alert("Todas las preguntas deben tener un enunciado.");
+                return;
+            }
+
+            if (!esUsaIa && validas.length === 0) {
+                hayError = true;
+                alert("Sin IA activada, debes proporcionar al menos una respuesta válida.");
+                return;
+            }
+
+            let item = { tipo, enunciado, validas };
+
+            if (tipo === 'ordenar') {
+                const fichasInput = preg.querySelector('.input-fichas').value;
+                const palabras = fichasInput.split(',').map(s => s.trim()).filter(Boolean);
+                if (palabras.length < 2) {
+                    hayError = true;
+                    alert("Las preguntas de ordenar deben tener al menos dos fichas.");
+                    return;
+                }
+                item.palabras = palabras;
+            }
+
+            preguntasArray.push(item);
+        });
+
+        if (hayError) {
+            e.preventDefault();
+            return;
+        }
+
+        document.getElementById('cuestionarioHidden').value = JSON.stringify(preguntasArray);
+    });
 });
 </script>
 {% endblock %}

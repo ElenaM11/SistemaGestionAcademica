@@ -2,14 +2,13 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
-
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-# En desarrollo basta con vacío (DEBUG=True). Para producción: ALLOWED_HOSTS=midominio.com,otro.com en el .env
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '').split(',') if h.strip()]
 
 
@@ -34,9 +33,9 @@ INSTALLED_APPS = [
     'materiales',
     'notificaciones',
     'comunicacion',
+    'asistente_ia',   
 ]
 
-#Agregue esto segun es importante pero aja
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
@@ -50,9 +49,9 @@ REST_FRAMEWORK = {
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'usuarios.middleware.ForzarCambioPasswordMiddleware',   # obliga a cambiar la contraseña inicial
+    'usuarios.middleware.ForzarCambioPasswordMiddleware',  
     'django.middleware.common.CommonMiddleware',
-    #'django.middleware.csrf.CsrfViewMiddleware', 
+    #'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -95,13 +94,11 @@ DATABASES = {
             'sslmode': 'require',
             'connect_timeout': 10,
         },
-        # Reutiliza la conexión 60 s en lugar de abrir una nueva a Azure en cada petición
         'CONN_MAX_AGE': 60,
-        'CONN_HEALTH_CHECKS': True,   # revisa que la conexión siga viva antes de reutilizarla
+        'CONN_HEALTH_CHECKS': True,   
     }
 }
 
-# Sesión: lee de memoria y solo consulta la base cuando hace falta (ahorra viajes a Azure)
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 
@@ -112,8 +109,6 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
-# Internationalization
 
 LANGUAGE_CODE = 'es'                 # español (mensajes de Django, fechas, formatos)
 TIME_ZONE = 'America/La_Paz'         # hora de Bolivia
@@ -128,8 +123,8 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR.parent / 'media'
 
 STATICFILES_DIRS = [
-    BASE_DIR.parent / 'frontend' / 'static',   # CSS
-    BASE_DIR.parent / 'frontend' / 'image',    # Imágenes
+    BASE_DIR.parent / 'frontend' / 'static',
+    BASE_DIR.parent / 'frontend' / 'image',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -145,9 +140,14 @@ if os.getenv('LOG_SQL', 'False') == 'True':
         'loggers': {'django.db.backends': {'handlers': ['console'], 'level': 'DEBUG'}},
     }
 
-#livekit
+# livekit
 LIVEKIT_URL = os.getenv('LIVEKIT_URL', '')
 LIVEKIT_API_KEY = os.getenv('LIVEKIT_API_KEY', '')
 LIVEKIT_API_SECRET = os.getenv('LIVEKIT_API_SECRET', '')
 
 ASGI_APPLICATION = 'config.asgi.application'
+
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
+ASISTENTE_IA_MAX_INTENTOS = 3
+ASISTENTE_IA_GUARDAR = False   # ver punto 6

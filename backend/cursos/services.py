@@ -353,7 +353,6 @@ def materiales_estudiante(estudiante, paralelo_id=None):
 
 
 def actividades_estudiante(estudiante, paralelo_id=None):
-    """Listo actividades con su estado calculado para el estudiante autenticado."""
     resultado = []
     ahora = timezone.now()
     qs = Actividad.objects.filter(paralelo__inscripciones__in=_inscripciones_estudiante(estudiante), estado='ACTIVA').select_related(
@@ -363,7 +362,15 @@ def actividades_estudiante(estudiante, paralelo_id=None):
         qs = qs.filter(paralelo_id=paralelo_id)
     for actividad in qs:
         entrega = actividad.entregas.filter(estudiante=estudiante).first()
-        estado = 'ENTREGADA' if entrega else ('VENCIDA' if actividad.fecha_limite and actividad.fecha_limite < ahora else 'PENDIENTE')
+        
+        if entrega:
+            if not entrega.contenido_texto and not entrega.archivo and entrega.calificacion is None:
+                estado = 'PENDIENTE' if not (actividad.fecha_limite and actividad.fecha_limite < ahora) else 'VENCIDA'
+            else:
+                estado = 'ENTREGADA'
+        else:
+            estado = 'VENCIDA' if actividad.fecha_limite and actividad.fecha_limite < ahora else 'PENDIENTE'
+            
         resultado.append((actividad, entrega, estado))
     return resultado
 

@@ -38,9 +38,8 @@ def _leer_post(request):
         "fecha_limite": limite,
         "puntaje_maximo": puntaje,
         "permite_entrega_tardia": bool(p.get("permitir_tardia")),
-        "usa_ia": bool(p.get("asistente_ia")),  # ver nota sobre HU-32
+        "usa_ia": bool(p.get("asistente_ia")),
     }
-
 
 def _render_lista(request, ctx, error=None):
     actividades = list(
@@ -53,12 +52,10 @@ def _render_lista(request, ctx, error=None):
     ctx.update(actividades=actividades, error=error)
     return render(request, "docente/actividad_crear.html", ctx)
 
-
 def _actividad_del_docente(request, curso_id, pk):
     return get_object_or_404(
         Actividad, pk=pk, paralelo__docente=request.docente, paralelo__curso_id=curso_id
     )
-
 
 @docente_requerido
 def docente_actividades(request, curso_id):
@@ -77,14 +74,38 @@ def docente_actividades(request, curso_id):
             error = texto_error(e)
         else:
             messages.success(request, f"Actividad publicada. Se notificó a {n} estudiantes.")
+            
+            # REDIRECCIÓN AL EDITOR: Solo si es cuestionario/ordenar y usa IA
+            if actividad.tipo in ('cuestionario', 'ordenar') and actividad.usa_ia:
+                return redirect("docente_cuestionario_crear", curso_id=curso_id, pk=actividad.pk)
+                
             return redirect("docente_actividades", curso_id=curso_id)
     return _render_lista(request, ctx, error)
 
 
 @docente_requerido
-def docente_cuestionario_crear(request, curso_id):
-    """Muestro el editor visual para preparar un cuestionario del curso."""
+def docente_cuestionario_crear(request, curso_id, pk):
+    """Editor visual SOLO para las preguntas y respuestas del cuestionario."""
     ctx = contexto_curso(request, curso_id)
+    actividad = _actividad_del_docente(request, curso_id, pk)
+    error = None
+    
+    if request.method == "POST":
+        try:
+            bruto = request.POST.get('cuestionario')
+            from asistente_ia.cuestionario import parsear_y_validar, CuestionarioInvalido
+            parsear_y_validar(bruto, usa_ia=actividad.usa_ia) # Validar antes de guardar
+            actividad.cuestionario = bruto
+            actividad.save()
+        except CuestionarioInvalido as e:
+            error = str(e)
+        except Exception as e:
+            error = "Error al guardar las preguntas."
+        else:
+            messages.success(request, "Preguntas guardadas correctamente.")
+            return redirect("docente_actividades", curso_id=curso_id)
+            
+    ctx.update(actividad=actividad, error=error)
     return render(request, "docente/cuestionario_crear.html", ctx)
 
 
@@ -109,7 +130,6 @@ def docente_actividad_editar(request, curso_id, pk):
     ctx.update(actividad=actividad, error=error)
     return render(request, "docente/actividad_editar.html", ctx)
 
-
 @docente_requerido
 @require_POST
 def docente_actividad_eliminar(request, curso_id, pk):
@@ -123,7 +143,6 @@ def docente_actividad_eliminar(request, curso_id, pk):
     actividad.delete()
     messages.success(request, "Actividad eliminada.")
     return redirect("docente_actividades", curso_id=curso_id)
-
 
 from cursos.models import Paralelo
 

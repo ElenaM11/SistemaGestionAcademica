@@ -1,0 +1,80 @@
+<input type="hidden" name="cuestionario" id="cuestionarioJson">
+<div id="edPreguntas"></div>
+<button type="button" id="edAgregar" class="btn btn-outline-primary">+ Agregar pregunta</button>
+<p id="edError" style="color:#b91c1c;margin-top:8px"></p>
+{{ cuestionario_inicial|json_script:"cuestionarioInicial" }}
+<script>
+(function () {
+  var cont = document.getElementById('edPreguntas');
+  var salida = document.getElementById('cuestionarioJson');
+  var err = document.getElementById('edError');
+  var form = salida.closest('form');
+  var datos = JSON.parse(document.getElementById('cuestionarioInicial').textContent) || [];
+
+  function el(tag, attrs, txt) {
+    var e = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) { e[k] = attrs[k]; });
+    if (txt) e.textContent = txt;
+    return e;
+  }
+
+  function nueva(q) {
+    q = q || {tipo: 'escribir', enunciado: '', validas: [''], palabras: []};
+    var card = el('div', {className: 'card p-3 mb-3'});
+    var tipo = el('select', {className: 'form-select mb-2'});
+    [['escribir', 'Escribir'], ['ordenar', 'Ordenar']].forEach(function (o) {
+      var op = el('option', {value: o[0]}, o[1]); tipo.appendChild(op);
+    });
+    tipo.value = q.tipo;
+    var enun = el('input', {className: 'form-control mb-2', maxLength: 300,
+                            placeholder: 'Enunciado', value: q.enunciado});
+    var fichas = el('input', {className: 'form-control mb-2',
+                              placeholder: 'Fichas separadas por coma (solo ordenar)',
+                              value: (q.palabras || []).join(', ')});
+    var lista = el('div');
+    function agregarValida(v) {
+      var fila = el('div', {className: 'd-flex gap-2 mb-1'});
+      fila.appendChild(el('input', {className: 'form-control valida', maxLength: 300,
+                                    placeholder: 'Respuesta válida', value: v || ''}));
+      var x = el('button', {type: 'button', className: 'btn btn-sm btn-outline-danger'}, '×');
+      x.onclick = function () { fila.remove(); };
+      fila.appendChild(x); lista.appendChild(fila);
+    }
+    (q.validas && q.validas.length ? q.validas : ['']).forEach(agregarValida);
+    var mas = el('button', {type: 'button', className: 'btn btn-sm btn-link'}, '+ otra respuesta válida');
+    mas.onclick = function () { agregarValida(''); };
+    var quitar = el('button', {type: 'button', className: 'btn btn-sm btn-outline-danger mt-2'}, 'Eliminar pregunta');
+    quitar.onclick = function () { card.remove(); };
+    function ver() { fichas.style.display = tipo.value === 'ordenar' ? '' : 'none'; }
+    tipo.onchange = ver; ver();
+    [tipo, enun, fichas, lista, mas, quitar].forEach(function (n) { card.appendChild(n); });
+    card.leer = function () {
+      var o = {tipo: tipo.value, enunciado: enun.value.trim(),
+               validas: Array.prototype.map.call(lista.querySelectorAll('.valida'),
+                        function (i) { return i.value.trim(); }).filter(Boolean)};
+      if (o.tipo === 'ordenar') {
+        o.palabras = fichas.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+      }
+      return o;
+    };
+    cont.appendChild(card);
+  }
+
+  datos.forEach(nueva);
+  if (!datos.length) nueva();
+  document.getElementById('edAgregar').onclick = function () { nueva(); };
+
+  form.addEventListener('submit', function (ev) {
+    var qs = Array.prototype.map.call(cont.children, function (c) { return c.leer(); });
+    var usaIa = form.querySelector('[name="usa_ia"], [name="asistente_ia"]');
+    err.textContent = '';
+    var mal = qs.some(function (q) { return !q.enunciado || !q.validas.length; });
+    if (!qs.length || mal) {
+      ev.preventDefault();
+      err.textContent = 'Cada pregunta necesita enunciado y al menos una respuesta válida.';
+      return;
+    }
+    salida.value = JSON.stringify(qs);
+  });
+})();
+</script>
