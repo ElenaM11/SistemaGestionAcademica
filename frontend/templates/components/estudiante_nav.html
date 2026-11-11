@@ -34,7 +34,7 @@
 
         {% if paralelos %}
             {% for grupo in paralelos %}
-                <a class="sub-item {% if paralelo.pk == grupo.pk %}active{% endif %}" href="{% url 'estudiante_academico' %}?id_paralelo={{ grupo.pk }}" title="{{ grupo.curso.nombre }} · {{ grupo.turno.nombre }}">
+                <a class="sub-item {% if paralelo.pk == grupo.pk %}active{% endif %}" href="{% url 'estudiante_academico' %}?id_paralelo={{ grupo.pk }}"{% if paralelo.pk == grupo.pk %} aria-current="page"{% endif %} title="{{ grupo.curso.nombre }} · {{ grupo.turno.nombre }}">
                     <span class="chip c-orange">{{ grupo.curso.nivel.codigo }}</span>
                     <span class="sub-text">{{ grupo.curso.nombre }} · {{ grupo.turno.nombre }}</span>
                 </a>
@@ -43,7 +43,7 @@
             {% endfor %}
         {% elif inscripciones %}
             {% for grupo in inscripciones %}
-                <a class="sub-item" href="{% url 'estudiante_academico' %}?id_paralelo={{ grupo.paralelo_id }}" title="{{ grupo.paralelo.curso.nombre }} · {{ grupo.paralelo.turno.nombre }}">
+                <a class="sub-item {% if paralelo.pk == grupo.paralelo_id %}active{% endif %}" href="{% url 'estudiante_academico' %}?id_paralelo={{ grupo.paralelo_id }}"{% if paralelo.pk == grupo.paralelo_id %} aria-current="page"{% endif %} title="{{ grupo.paralelo.curso.nombre }} · {{ grupo.paralelo.turno.nombre }}">
                     <span class="chip c-orange">{{ grupo.paralelo.curso.nivel.codigo }}</span>
                     <span class="sub-text">{{ grupo.paralelo.curso.nombre }} · {{ grupo.paralelo.turno.nombre }}</span>
                 </a>

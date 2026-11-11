@@ -4,12 +4,14 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR.parent / ".env")
 
 SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+DEBUG = True
 
-ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '').split(',') if h.strip()]
+ALLOWED_HOSTS = [
+    h.strip() for h in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,[::1]').split(',') if h.strip()
+]
 
 
 # Application definition
@@ -72,6 +74,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'notificaciones.context_processors.no_leidas',
             ],
         },
     },
@@ -80,7 +83,7 @@ TEMPLATES = [
 #WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database (PostgreSQL en Azure)
+# Database (PostgreSQL en Azure; requiere SSL)
 
 DATABASES = {
     'default': {
@@ -123,8 +126,10 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR.parent / 'media'
 
 STATICFILES_DIRS = [
-    BASE_DIR.parent / 'frontend' / 'static',
-    BASE_DIR.parent / 'frontend' / 'image',
+    path for path in (
+        BASE_DIR.parent / 'frontend' / 'static',
+        BASE_DIR.parent / 'frontend' / 'image',
+    ) if path.exists()
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

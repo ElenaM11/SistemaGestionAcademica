@@ -5,7 +5,11 @@
 {% block extra_css %}<link rel="stylesheet" href="/static/css/cuestionario.css?v=2">{% endblock %}
 {% block content %}
 {% include 'components/topbar.html' with user_name=usuario.nombres user_role='Estudiante' initials=usuario.iniciales show_search=False %}
+{% if vista == 'tareas' %}
+{% include 'components/estudiante_nav.html' with active_rail='tareas' %}
+{% else %}
 {% include 'components/estudiante_nav.html' with active_rail='cursos' %}
+{% endif %}
 
 <main class="app-main">
     <div class="row">

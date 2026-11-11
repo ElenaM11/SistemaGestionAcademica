@@ -36,14 +36,14 @@
 
         {% with destino=nav_url_name|default:'docente_estudiantes_curso' %}
         {% for grupo in paralelos %}
-            {% if grupo.curso_id == curso.id_curso %}
-            <a class="sub-item active" href="{% url destino grupo.curso_id %}" aria-current="page" title="{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}">
+            {% if grupo.pk == paralelo.pk or paralelo_id|stringformat:'s' == grupo.pk|stringformat:'s' %}
+            <a class="sub-item active" href="{% url destino grupo.curso_id %}?paralelo={{ grupo.pk }}" aria-current="page" title="{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}">
                 <span class="chip c-orange">{{ grupo.curso.nivel.codigo }}</span>
                 <span class="sub-text">{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}</span>
             </a>
             {% else %}
-            <a class="sub-item" href="{% url destino grupo.curso_id %}" title="{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}">
-                <span class="chip {% cycle 'c-dark' 'c-gray' %}">{{ grupo.curso.nivel.codigo }}</span>
+            <a class="sub-item" href="{% url destino grupo.curso_id %}?paralelo={{ grupo.pk }}" title="{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}">
+                <span class="chip c-orange">{{ grupo.curso.nivel.codigo }}</span>
                 <span class="sub-text">{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}</span>
             </a>
             {% endif %}

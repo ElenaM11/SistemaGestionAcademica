@@ -9,27 +9,13 @@ Contexto esperado desde la vista:
 {% endcomment %}
 
 {% block content %}
+{% include 'components/topbar.html' with user_name=nombre_completo user_role=rol_nombre initials=iniciales show_search=False %}
 {% if es_admin %}
-    {% include 'components/topbar.html' with user_name=nombre_completo user_role=rol_nombre initials=iniciales %}
     {% include 'components/sidebar_admin.html' with active_tab='' %}
-    <main class="app-main no-panel">
 {% else %}
     {% include sidebar_template with active_tab='' %}
-    <div class="main-content">
-        <nav class="top-navbar">
-            <button class="hamburger-btn" id="hamburgerBtn"><i class="bi bi-list"></i></button>
-            <div class="search-box"><input type="text" placeholder="Buscar..."></div>
-            <div class="user-info">
-                <div>
-                    <div class="user-name">{{ nombre_completo }}</div>
-                    <div class="user-role">{{ rol_nombre }}</div>
-                </div>
-                <div class="user-avatar">{{ iniciales }}</div>
-                <a href="{% url 'logout' %}" class="btn-logout">Cerrar sesion</a>
-            </div>
-        </nav>
-        <div class="p-4">
 {% endif %}
+<main class="app-main no-panel">
 
         <div class="col-lg-7 col-xl-6">
             <h3 class="fw-bold mb-1">Mi perfil</h3>
@@ -66,12 +52,7 @@ Contexto esperado desde la vista:
             </div>
         </div>
 
-{% if es_admin %}
-    </main>
-{% else %}
-        </div>
-    </div>
-{% endif %}
+</main>
 {% endblock %}
 
 {% block extra_js %}
@@ -79,7 +60,7 @@ Contexto esperado desde la vista:
     const hb = document.getElementById('hamburgerBtn'), sb = document.getElementById('sidebar'), ov = document.getElementById('sidebarOverlay');
     if (hb && sb) {
         hb.addEventListener('click', () => { sb.classList.toggle('show'); ov.classList.toggle('show'); });
-        ov.addEventListener('click', () => { sb.classList.remove('show'); ov.classList.remove('show'); });
+        ov?.addEventListener('click', () => { sb.classList.remove('show'); ov.classList.remove('show'); });
     }
 </script>
 {% endblock %}
