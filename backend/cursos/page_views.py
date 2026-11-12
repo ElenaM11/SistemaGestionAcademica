@@ -7,31 +7,11 @@ from django.utils.dateparse import parse_time
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from actividades.models import Actividad
-
-from usuarios.models import Docente, Estudiante, Usuario
-
-from .models import Curso, DocenteIdioma, EstudianteParalelo, Idioma, Nivel, Paralelo, Programa, Turno
-from .serializers import CursoSerializer, ParaleloActualizarSerializer, ParaleloEntradaSerializer
-from .services import (
-    asignar_docente, actualizar_paralelo, crear_elemento_catalogo, crear_o_actualizar_curso,
-    crear_paralelo, docente_disponible_para_horarios, inscribir_estudiante, listar_paralelos_disponibles,
-    habilitar_idioma_docente, retirar_inscripcion,
-)
-
-from asistente_ia.cuestionario import preguntas_publicas
-from asistente_ia.persistencia import intentos_por_pregunta
-from django.http import HttpResponseForbidden
-from django.contrib import messages
-from django.db import IntegrityError
-from django.db.models import Count, Q
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.dateparse import parse_time
-from django.utils import timezone
-from rest_framework.exceptions import ValidationError
-from actividades.models import Actividad
 from actividades.services_progreso import progreso_paralelo
 
 from usuarios.models import Docente, Estudiante, Usuario
+from usuarios.decorators import docente_requerido  
+from usuarios.contexto import contexto_curso, texto_error
 
 from .models import Curso, DocenteIdioma, EstudianteParalelo, Idioma, Nivel, Paralelo, Programa, Turno
 from .serializers import CursoSerializer, ParaleloActualizarSerializer, ParaleloEntradaSerializer
@@ -45,18 +25,11 @@ from asistente_ia.cuestionario import preguntas_publicas
 from asistente_ia.persistencia import intentos_por_pregunta
 
 
+@docente_requerido
 def docente_curso_resumen_pagina(request, curso_id):
-    usuario, respuesta = validar_rol_pagina(request, 'Docente')
-    if respuesta:
-        return respuesta
-    docente = get_object_or_404(Docente, pk=usuario.pk)
-    curso = get_object_or_404(Curso.objects.select_related('idioma', 'nivel'), pk=curso_id)
-    
-    paralelos = Paralelo.objects.filter(docente=docente, curso=curso, estado='ACTIVO').select_related('turno').prefetch_related('horarios')
-    if not paralelos.exists():
-        return HttpResponseForbidden('No tienes acceso a este curso.')
-        
-    paralelo = paralelos.first() # Asumimos el primer paralelo para el resumen general
+    """Muestro un resumen general del curso para el docente autenticado."""
+    ctx = contexto_curso(request, curso_id)
+    paralelo = ctx["paralelo"]
     
     progreso = progreso_paralelo(paralelo)
     
@@ -78,11 +51,8 @@ def docente_curso_resumen_pagina(request, curso_id):
         if asistencias:
             asistencia_promedio = round(sum(asistencias) / len(asistencias), 1)
 
-    return render(request, 'docente/resumen_curso.html', {
-        'usuario': usuario,
-        'curso': curso,
-        'paralelo': paralelo,
-        'paralelos': paralelos,
+    ctx.update({
+        'progreso': progreso, # <--- ESTA ES LA LÍNEA MÁGICA QUE FALTABA
         'total_estudiantes': total_estudiantes,
         'promedio_general': promedio_general,
         'entregas_totales': entregas_totales,
@@ -91,6 +61,8 @@ def docente_curso_resumen_pagina(request, curso_id):
         'active_rail': 'equipos',
         'nav_url_name': 'docente_curso_resumen'
     })
+    
+    return render(request, "docente/resumen_curso.html", ctx)
 
 
 def registrar_error_pagina(request, error):
@@ -136,8 +108,6 @@ def modulo_estudiante(request):
         'usuario': usuario, 'paralelos': paralelos, 'paralelo': paralelo,
         'vista': vista, 'active_tab': 'tareas' if vista == 'tareas' else 'cursos',
     })
-
-
 
 
 def cuestionario_estudiante_pagina(request, actividad_id):

@@ -4,11 +4,12 @@
 
 {% block topbar %}
     {% if rol_ui == 'docente' %}
-        {% include 'components/topbar_docente.html' %}
+        {% include 'components/topbar_docente.html' with show_search=False %}
     {% elif rol_ui == 'administrador' %}
-        {% include 'components/topbar.html' with user_name=usuario.nombres user_role='Administrador' initials=usuario.iniciales %}
+        <!-- Ocultamos el buscador global para el administrador en la vista de chat -->
+        {% include 'components/topbar.html' with user_name=usuario.nombres user_role='Administrador' initials=usuario.iniciales show_search=False %}
     {% else %}
-        {% include 'components/topbar_estudiante.html' %}
+        {% include 'components/topbar_estudiante.html' with show_search=False %}
     {% endif %}
 {% endblock %}
 
@@ -25,7 +26,8 @@
 {% block page_banner %}{% endblock %}
 {% block banner_texto %}{% endblock %}
 
-{% block tabs %}
+<!-- Ocultamos las pestañas superiores para el administrador para evitar el error de permisos -->
+{% block tabs %} 
     {% if rol_ui != 'administrador' %}
         {% include 'components/comunicacion_tabs.html' with tab_activa='mensajes' %}
     {% endif %}

@@ -21,7 +21,6 @@
             </a>
         </li>
         <li>
-            <!-- NUEVO: Enlace al chat del administrador -->
             <a class="rail-link {% if active_tab == 'chat' %}active{% endif %}" href="{% url 'admin_mensajes' %}">
                 <i class="bi bi-chat-square"></i><span>Chat</span>
                 {% if chat_no_leidos %}<span class="rail-badge" aria-label="{{ chat_no_leidos }} sin leer">{{ chat_no_leidos_texto }}</span>{% endif %}
@@ -34,7 +33,6 @@
         <div class="subpanel-header">
             <h4>Usuarios</h4>
         </div>
-
         {% if active_sub == 'registrar' %}
             <a class="sub-item active" href="{% url 'admin_register_user' %}" title="Registrar usuario">
                 <span class="chip c-orange">+</span> <span class="sub-label">Registrar usuario</span>
@@ -78,6 +76,18 @@
         </a>
         <a class="sub-item {% if active_sub == 'catalogos' %}active{% endif %}" href="{% url 'admin_catalogos' %}" title="Configurar catálogos">
             <span class="chip c-gray">+</span> <span class="sub-label">Configurar catálogos</span>
+        </a>
+    </aside>
+    {% endif %}
+
+    <!-- NUEVO: Subpanel para el Chat del Administrador -->
+    {% if active_tab == 'chat' %}
+    <aside class="subpanel">
+        <div class="subpanel-header">
+            <h4>Chat</h4>
+        </div>
+        <a class="sub-item active" href="{% url 'admin_mensajes' %}" title="Bandeja de entrada">
+            <span class="chip c-orange">B</span> <span class="sub-label">Bandeja de entrada</span>
         </a>
     </aside>
     {% endif %}

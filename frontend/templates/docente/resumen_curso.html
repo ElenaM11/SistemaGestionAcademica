@@ -6,35 +6,100 @@
 
 {% block curso_contenido %}
 <div class="row g-4 mb-4">
+    <!-- Tarjeta Estudiantes -->
     <div class="col-md-3">
         <div class="stats-card">
             <div class="stat-label">Estudiantes</div>
             <div class="stat-number">{{ total_estudiantes }}</div>
         </div>
     </div>
+    
+    <!-- Tarjeta Promedio -->
     <div class="col-md-3">
         <div class="stats-card">
             <div class="stat-label">Promedio General</div>
             <div class="stat-number">{{ promedio_general }}</div>
         </div>
     </div>
+    
+    <!-- Tarjeta Entregas -->
     <div class="col-md-3">
-        <div class="stats-card">
+        <a href="{% url 'docente_actividades' curso.id_curso %}" class="stats-card d-block text-decoration-none" title="Ir a Tareas">
             <div class="stat-label">Entregas</div>
             <div class="stat-number">{{ entregas_totales }} <span class="fs-6 text-muted">/ {{ entregas_esperadas }}</span></div>
-        </div>
+            <small class="text-muted mt-2 d-block">Ver tareas <i class="bi bi-arrow-right"></i></small>
+        </a>
     </div>
+    
+    <!-- Tarjeta Asistencia -->
     <div class="col-md-3">
-        <div class="stats-card">
+        <a href="{% url 'docente_asistencia' curso.id_curso %}" class="stats-card d-block text-decoration-none" title="Ir a Asistencia">
             <div class="stat-label">Asistencia Promedio</div>
             <div class="stat-number">{{ asistencia_promedio }}%</div>
-        </div>
+            <small class="text-muted mt-2 d-block">Ver asistencia <i class="bi bi-arrow-right"></i></small>
+        </a>
     </div>
 </div>
 
-<div class="panel-card text-center py-5">
-    <i class="bi bi-graph-up display-4 text-muted mb-3"></i>
-    <h4 class="fw-bold">Bienvenido al resumen del curso</h4>
-    <p class="text-muted mb-0">Desde aquí puedes monitorear el rendimiento general. Utiliza las pestañas superiores para navegar a Tareas, Asistencia o Progreso.</p>
+<div class="row g-4">
+    <!-- Estudiantes que necesitan apoyo -->
+    <div class="col-md-6">
+        <div class="panel-card h-100">
+            <h5 class="panel-title text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Estudiantes en riesgo</h5>
+            <p class="text-muted small mb-3">Estudiantes con promedio menor a 60 o asistencia menor al 75%.</p>
+            
+            {% if en_riesgo_count > 0 %}
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Estudiante</th>
+                                <th>Promedio</th>
+                                <th>Asistencia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in progreso %}
+                                {% if item.necesita_apoyo %}
+                                <tr>
+                                    <td>{{ item.estudiante.usuario.nombres }} {{ item.estudiante.usuario.ap_pat }}</td>
+                                    <td>{{ item.promedio|default_if_none:'—' }}</td>
+                                    <td>{{ item.asistencia_pct }}%</td>
+                                </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-success mt-3">
+                    <i class="bi bi-check-circle me-1"></i> ¡Excelente! Ningún estudiante está en riesgo.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Últimas actividades -->
+    <div class="col-md-6">
+        <div class="panel-card h-100">
+            <h5 class="panel-title">Últimas actividades</h5>
+            <p class="text-muted small mb-3">Las tareas más recientes publicadas en este curso.</p>
+            <ul class="list-group list-group-flush">
+                {% for act in curso.actividades.all|dictsortreversed:"fecha_publicacion"|slice:":5" %}
+                <li class="list-group-item px-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ act.titulo }}</strong><br>
+                            <small class="text-muted">{{ act.get_tipo_display }} · Vence: {{ act.fecha_limite|date:'d M'|default:'Sin límite' }}</small>
+                        </div>
+                        <a href="{% url 'docente_entregas' curso.id_curso act.pk %}" class="btn btn-sm btn-outline-primary">Ver</a>
+                    </div>
+                </li>
+                {% empty %}
+                <li class="list-group-item px-0 text-muted">No hay actividades creadas aún.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
 </div>
 {% endblock %}

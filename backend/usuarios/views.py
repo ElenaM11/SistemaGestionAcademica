@@ -55,15 +55,19 @@ def api_buscar_personas(request):
     for persona in visibles.select_related('rol').order_by('ap_pat', 'nombres').distinct()[:15]:
         url_perfil = reverse('persona_perfil', args=[persona.pk])
         url_mensaje = ''
-        if rol_actual in ('Docente', 'Estudiante'):
-            if rol_actual == 'Estudiante':
-                url_mensaje = f"{reverse('estudiante_mensajes')}?con={persona.pk}"
-            else:
-                from cursos.models import Paralelo
-                curso_id = (Paralelo.objects.filter(docente_id=usuario.pk, estado='ACTIVO')
-                            .order_by('pk').values_list('curso_id', flat=True).first())
-                if curso_id:
-                    url_mensaje = f"{reverse('docente_mensajes', args=[curso_id])}?con={persona.pk}"
+        
+        if rol_actual == 'Administrador':
+            # El admin chatea desde su nueva vista
+            url_mensaje = f"{reverse('admin_mensajes')}?con={persona.pk}"
+        elif rol_actual == 'Estudiante':
+            url_mensaje = f"{reverse('estudiante_mensajes')}?con={persona.pk}"
+        elif rol_actual == 'Docente':
+            from cursos.models import Paralelo
+            curso_id = (Paralelo.objects.filter(docente_id=usuario.pk, estado='ACTIVO')
+                        .order_by('pk').values_list('curso_id', flat=True).first())
+            if curso_id:
+                url_mensaje = f"{reverse('docente_mensajes', args=[curso_id])}?con={persona.pk}"
+
         resultados.append({
             'id': persona.pk,
             'nombre': f'{persona.nombres} {persona.ap_pat or ""} {persona.ap_mat or ""}'.strip(),
@@ -646,7 +650,7 @@ def generar_correo_admin(nombres, ap_pat, ap_mat):
         
     return correo
 
-
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 from notificaciones.models import Notificacion
 
@@ -666,10 +670,17 @@ def admin_enviar_aviso(request):
         if rol_destino != 'todos':
             usuarios = usuarios.filter(rol__nombre__iexact=rol_destino)
             
-        notificaciones = [
-            Notificacion(usuario=u, tipo=Notificacion.Tipo.AVISO, mensaje=mensaje)
-            for u in usuarios
-        ]
+        notificaciones = []
+        for u in usuarios:
+            # Asignamos la URL destino dependiendo del rol
+            url_destino = None
+            if u.rol.nombre == 'Estudiante':
+                url_destino = reverse('estudiante_avisos')
+                
+            notificaciones.append(
+                Notificacion(usuario=u, tipo=Notificacion.Tipo.AVISO, mensaje=mensaje, url_destino=url_destino)
+            )
+            
         Notificacion.objects.bulk_create(notificaciones)
         
         messages.success(request, f"Aviso enviado a {len(notificaciones)} usuarios.")
