@@ -58,6 +58,15 @@
         </div>
         <div class="login-right">
             <h3>Iniciar sesion</h3>
+
+            {% if messages %}
+                {% for m in messages %}
+                <div class="alert alert-danger py-2" role="alert" style="font-size: 0.9rem;">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ m }}
+                </div>
+                {% endfor %}
+            {% endif %}
+
             <form method="post" action="{% url 'login' %}">
                 {% csrf_token %}
                 <div class="mb-3">
