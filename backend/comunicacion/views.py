@@ -319,3 +319,25 @@ def estudiante_mensajes(request):
         return respuesta
     ctx.update(datos, rol_ui="estudiante")
     return render(request, "comunicacion/chat.html", ctx)
+
+
+def admin_mensajes(request):
+    if request.session.get('usuario_rol', '').lower() != 'administrador':
+        return redirect('login')
+        
+    from usuarios.models import Usuario
+    usuario = Usuario.objects.filter(pk=request.session.get('usuario_id')).first()
+    if not usuario:
+        return redirect('login')
+        
+    respuesta, datos = construir_chat(request, usuario)
+    if respuesta:
+        return respuesta
+        
+    # Usamos el mismo template de chat pero con el rol de administrador
+    ctx = {
+        "usuario": usuario,
+        "rol_ui": "administrador", 
+    }
+    ctx.update(datos)
+    return render(request, "comunicacion/chat.html", ctx)

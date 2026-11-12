@@ -165,3 +165,37 @@ class TestFlujoComunicacion(BaseSetupTestCase):
         self.assertIsNotNone(msg)
         notif = Notificacion.objects.filter(usuario=self.usr_docente, tipo='MENSAJE').first()
         self.assertIsNotNone(notif)
+
+    def test_admin_puede_chatear_con_docente(self):
+        """Verifica que el administrador puede enviar un mensaje por chat a un docente."""
+        self.login_como(self.admin)
+        
+        # Simula el envío de un mensaje del admin al docente
+        response = self.client.post(reverse('admin_mensajes'), {
+            'texto': 'Hola docente, necesito el reporte.',
+            'con': self.usr_docente.pk
+        })
+        
+        # Verifica redirección y que el mensaje se guardó
+        self.assertEqual(response.status_code, 302)
+        msg = Mensaje.objects.filter(emisor=self.admin, receptor=self.usr_docente).first()
+        self.assertIsNotNone(msg)
+        self.assertEqual(msg.contenido, 'Hola docente, necesito el reporte.')
+
+    def test_admin_envia_aviso_global(self):
+        """Verifica que el admin puede enviar una notificación masiva."""
+        self.login_como(self.admin)
+        
+        response = self.client.post(reverse('admin_enviar_aviso'), {
+            'rol_destino': 'estudiante',
+            'mensaje': 'Estimados estudiantes, mañana no hay clases.'
+        })
+        
+        self.assertRedirects(response, reverse('admin_dashboard'))
+        
+        # Verifica que se creó la notificación SOLO para estudiantes
+        notif_est = Notificacion.objects.filter(usuario=self.usr_est, tipo='AVISO').first()
+        notif_doc = Notificacion.objects.filter(usuario=self.usr_docente, tipo='AVISO').first()
+        
+        self.assertIsNotNone(notif_est)
+        self.assertIsNone(notif_doc) 

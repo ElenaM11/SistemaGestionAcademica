@@ -1,11 +1,35 @@
 {% extends 'comunicacion_base.html' %}
 {% block title %}Mensajes - Da Vinci{% endblock %}
 {% block main_class %} app-main--chat{% endblock %}
-{% block topbar %}{% if rol_ui == 'docente' %}{% include 'components/topbar_docente.html' %}{% else %}{% include 'components/topbar_estudiante.html' %}{% endif %}{% endblock %}
-{% block nav %}{% if rol_ui == 'docente' %}{% include 'components/docente_nav.html' with active_rail='chat' nav_url_name='docente_mensajes' %}{% else %}{% include 'components/estudiante_nav.html' with active_rail='chat' %}{% endif %}{% endblock %}
+
+{% block topbar %}
+    {% if rol_ui == 'docente' %}
+        {% include 'components/topbar_docente.html' %}
+    {% elif rol_ui == 'administrador' %}
+        {% include 'components/topbar.html' with user_name=usuario.nombres user_role='Administrador' initials=usuario.iniciales %}
+    {% else %}
+        {% include 'components/topbar_estudiante.html' %}
+    {% endif %}
+{% endblock %}
+
+{% block nav %}
+    {% if rol_ui == 'docente' %}
+        {% include 'components/docente_nav.html' with active_rail='chat' nav_url_name='docente_mensajes' %}
+    {% elif rol_ui == 'administrador' %}
+        {% include 'components/sidebar_admin.html' with active_tab='chat' %}
+    {% else %}
+        {% include 'components/estudiante_nav.html' with active_rail='chat' %}
+    {% endif %}
+{% endblock %}
+
 {% block page_banner %}{% endblock %}
 {% block banner_texto %}{% endblock %}
-{% block tabs %}{% include 'components/comunicacion_tabs.html' with tab_activa='mensajes' %}{% endblock %}
+
+{% block tabs %}
+    {% if rol_ui != 'administrador' %}
+        {% include 'components/comunicacion_tabs.html' with tab_activa='mensajes' %}
+    {% endif %}
+{% endblock %}
 
 {% block contenido %}
 <div class="chat-app {% if abierta %}has-selection{% endif %}" id="chatApp" data-yo="{{ mi_id }}" data-bandeja-ws="/ws/bandeja/">

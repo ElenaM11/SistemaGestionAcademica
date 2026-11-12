@@ -1,8 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{# Actividad (campana): notificaciones del usuario. Sirve para administrador, docente y estudiante.
-   Contexto: usuario, rol ('administrador' | 'docente' | 'estudiante'), pagina (cada n: icono, tipo_texto,
-   destino, leida, mensaje, fecha), sin_leer, solo_no_leidas, y paralelos / inscripciones para el menú. #}
+{# Actividad (campana): notificaciones del usuario. Sirve para administrador, docente y estudiante. #}
 {% block title %}Actividad - Da Vinci{% endblock %}
 {% block extra_css %}<link href="{% static 'css/sprint4.css' %}?v=4" rel="stylesheet">{% endblock %}
 
@@ -33,12 +31,22 @@
                 <a class="nav-link {% if not solo_no_leidas %}active{% endif %}" href="{% url 'notificaciones' %}">Todas</a>
                 <a class="nav-link {% if solo_no_leidas %}active{% endif %}" href="{% url 'notificaciones' %}?solo=no_leidas">Sin leer{% if sin_leer %} ({{ sin_leer }}){% endif %}</a>
             </nav>
-            {% if sin_leer %}
-            <form method="post" action="{% url 'notificaciones_leer_todas' %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-secondary-custom"><i class="bi bi-check2-all me-1" aria-hidden="true"></i> Marcar todas como leídas</button>
-            </form>
-            {% endif %}
+            
+            <div class="d-flex gap-2">
+                <!-- NUEVO: Botón de enviar aviso para el Admin -->
+                {% if rol == 'administrador' %}
+                <a href="{% url 'admin_enviar_aviso' %}" class="btn btn-primary-custom">
+                    <i class="bi bi-megaphone me-1" aria-hidden="true"></i> Enviar Aviso Global
+                </a>
+                {% endif %}
+
+                {% if sin_leer %}
+                <form method="post" action="{% url 'notificaciones_leer_todas' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-secondary-custom"><i class="bi bi-check2-all me-1" aria-hidden="true"></i> Marcar todas como leídas</button>
+                </form>
+                {% endif %}
+            </div>
         </div>
 
         <div class="notif-list">

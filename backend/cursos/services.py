@@ -9,6 +9,7 @@ from rest_framework.exceptions import ValidationError
 from actividades.models import Actividad, Entrega
 from materiales.models import Material
 from asistencia.models import SesionClase, Asistencia
+from asistencia.services import resumen_asistencia # <-- IMPORTANTE
 from notificaciones.models import Notificacion
 from usuarios.models import Docente, Estudiante, Usuario
 
@@ -246,7 +247,7 @@ def inscribir_estudiante(estudiante_id, paralelo_id):
     else:
         resultado = EstudianteParalelo.objects.create(estudiante=estudiante, paralelo=paralelo)
 
-    # --- NUEVO: NOTIFICAR AL ADMIN SI SE LLENA EL CUPO ---
+    # NOTIFICAR AL ADMIN SI SE LLENA EL CUPO
     if paralelo.cupo_maximo is not None:
         nuevos_inscritos = EstudianteParalelo.objects.filter(paralelo=paralelo, estado='ACTIVO').count()
         if nuevos_inscritos >= paralelo.cupo_maximo:
@@ -257,7 +258,6 @@ def inscribir_estudiante(estudiante_id, paralelo_id):
                     tipo=Notificacion.Tipo.AVISO,
                     mensaje=f"El paralelo {paralelo.codigo} ha alcanzado su cupo máximo ({paralelo.cupo_maximo})."
                 )
-    # -----------------------------------------------------
     return resultado
 
 @transaction.atomic
@@ -298,7 +298,6 @@ def cambiar_asignacion(estudiante_paralelo_id, paralelo_id):
     inscripcion.save(update_fields=['paralelo'])
     return inscripcion
 
-# ... (El resto de tus funciones de progreso, materiales, etc. se mantienen exactamente igual)
 def estudiantes_de_paralelo(paralelo_id, docente):
     paralelo = get_object_or_404(Paralelo, pk=paralelo_id)
     if paralelo.docente_id != docente.pk:
@@ -353,16 +352,81 @@ def entregar_actividad(estudiante, actividad_id, contenido_texto='', archivo=Non
         archivo=archivo, es_tardia=tardia, estado='ENTREGADA',
     )
 
+
+# ==========================================
+# NUEVA FÓRMULA DE PROMEDIO PONDERADO
+# ==========================================
+def calcular_promedio_ponderado(estudiante, paralelo):
+    """
+    Calcula la nota final ponderada:
+    - 50% Tareas (escrita, oral)
+    - 40% Exámenes (cuestionario, ordenar)
+    - 10% Asistencia
+    Si una categoría no tiene datos, su peso se redistribuye.
+    """
+    entregas = Entrega.objects.filter(
+        estudiante=estudiante, 
+        actividad__paralelo=paralelo, 
+        calificacion__isnull=False
+    ).select_related('actividad')
+
+    notas_tareas = []
+    notas_examenes = []
+
+    for e in entregas:
+        maximo = float(e.actividad.puntaje_maximo or 100)
+        nota_100 = (float(e.calificacion) / maximo) * 100
+        
+        # Clasificamos según el tipo de actividad
+        if e.actividad.tipo in ['cuestionario', 'ordenar']:
+            notas_examenes.append(nota_100)
+        else:
+            notas_tareas.append(nota_100)
+
+    prom_tareas = sum(notas_tareas) / len(notas_tareas) if notas_tareas else None
+    prom_examenes = sum(notas_examenes) / len(notas_examenes) if notas_examenes else None
+
+    # Calculamos la asistencia usando tu servicio existente
+    _, dict_asistencia = resumen_asistencia(paralelo, [estudiante.pk])
+    asistencia_pct = dict_asistencia.get(estudiante.pk, {}).get('pct')
+
+    pesos = []
+    notas = []
+    
+    if prom_tareas is not None:
+        pesos.append(0.50)
+        notas.append(prom_tareas)
+    if prom_examenes is not None:
+        pesos.append(0.40)
+        notas.append(prom_examenes)
+    if asistencia_pct is not None:
+        pesos.append(0.10)
+        notas.append(float(asistencia_pct))
+
+    if not notas:
+        return None  # No hay datos suficientes para calcular un promedio
+
+    # Redistribución proporcional si falta alguna categoría
+    suma_pesos = sum(pesos)
+    nota_final = sum(n * (p / suma_pesos) for n, p in zip(notas, pesos))
+    
+    return round(nota_final, 2)
+
 def resumen_progreso(estudiante, paralelo):
+    """Integro calificaciones, entregas y asistencia de un estudiante en un paralelo."""
     entregas = Entrega.objects.filter(estudiante=estudiante, actividad__paralelo=paralelo)
     calificadas = entregas.filter(calificacion__isnull=False)
-    notas = list(calificadas.values_list('calificacion', flat=True))
+    
     asistencias = Asistencia.objects.filter(estudiante=estudiante, sesion__paralelo=paralelo)
     total_asistencia = asistencias.count()
     presentes = asistencias.filter(estado__in=['PRESENTE', 'TARDANZA']).count()
+    
+    # Usamos la nueva función de promedio ponderado
+    promedio_ponderado = calcular_promedio_ponderado(estudiante, paralelo)
+
     return {
         'id_paralelo': paralelo.pk, 'codigo_paralelo': paralelo.codigo, 'curso': paralelo.curso.nombre,
-        'promedio': round(sum(notas) / len(notas), 2) if notas else None,
+        'promedio': promedio_ponderado, # <-- AHORA DEVUELVE LA NOTA FINAL
         'actividades_entregadas': entregas.count(),
         'actividades_totales': Actividad.objects.filter(paralelo=paralelo, estado='ACTIVA').count(),
         'actividades_calificadas': calificadas.count(),

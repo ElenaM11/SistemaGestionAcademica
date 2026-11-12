@@ -40,3 +40,15 @@ class TestSeguridadSistema(TestCase):
         
         # Debe dar error 403 porque no enviamos el token
         self.assertEqual(response.status_code, 403)
+    def test_estudiante_no_puede_entrar_al_chat_admin(self):
+        """Un estudiante no debe poder acceder a la ruta de chat del administrador."""
+        session = self.client.session
+        session['usuario_id'] = self.estudiante.id_usuario
+        session['usuario_rol'] = 'Estudiante'
+        session.save()
+
+        # Intenta acceder a la vista del chat del admin
+        response = self.client.get(reverse('admin_mensajes'))
+        
+        # Verifica que lo redirige al login o le da error
+        self.assertNotEqual(response.status_code, 200)
