@@ -1,0 +1,104 @@
+<script>
+// Inicializo el buscador de personas en cada barra superior disponible.
+document.querySelectorAll('.global-search').forEach((contenedor) => {
+    const campo = contenedor.querySelector('input[name="q"]');
+    const lista = contenedor.querySelector('.global-search-results');
+    let espera;
+    let consultaActiva = '';
+
+    // Creo un enlace seguro para cada acción disponible en la vista previa.
+    const crearAccion = (texto, href, clase) => {
+        if (!href) return null;
+        const enlace = document.createElement('a');
+        enlace.className = clase;
+        enlace.href = href;
+        enlace.textContent = texto;
+        return enlace;
+    };
+
+    // Pinto los contactos y sus accesos sin insertar texto HTML del servidor.
+    const pintarResultados = (personas) => {
+        lista.replaceChildren();
+        if (!personas.length) {
+            const vacio = document.createElement('p');
+            vacio.className = 'global-search-empty';
+            vacio.textContent = 'No se encontraron personas.';
+            lista.append(vacio);
+            return;
+        }
+        // Creo una fila segura para cada persona encontrada.
+        personas.forEach((persona) => {
+            const fila = document.createElement('article');
+            fila.className = 'global-search-person';
+            fila.setAttribute('role', 'option');
+            const iniciales = document.createElement('span');
+            iniciales.className = 'global-search-avatar';
+            iniciales.textContent = persona.iniciales;
+            const detalle = document.createElement('div');
+            detalle.className = 'global-search-detail';
+            const nombre = document.createElement('strong');
+            nombre.textContent = persona.nombre;
+            const correo = document.createElement('span');
+            correo.textContent = persona.correo;
+            const rol = document.createElement('small');
+            rol.textContent = persona.rol;
+            detalle.append(nombre, correo, rol);
+            const acciones = document.createElement('div');
+            acciones.className = 'global-search-actions';
+            const mensaje = crearAccion('Mensaje', persona.mensaje_url, 'global-search-message');
+            const perfil = crearAccion('Ver perfil', persona.perfil_url, 'global-search-profile');
+            if (mensaje) acciones.append(mensaje);
+            if (perfil) acciones.append(perfil);
+            fila.append(iniciales, detalle, acciones);
+            lista.append(fila);
+        });
+    };
+
+    // Consulto la API mientras se escribe y muestro una lista desplazable.
+    campo.addEventListener('input', () => {
+        window.clearTimeout(espera);
+        const consulta = campo.value.trim();
+        consultaActiva = consulta;
+        if (consulta.length < 2) {
+            lista.hidden = true;
+            campo.setAttribute('aria-expanded', 'false');
+            return;
+        }
+        // Espero una pausa breve antes de consultar al servidor.
+        espera = window.setTimeout(async () => {
+            lista.hidden = false;
+            lista.textContent = 'Buscando…';
+            campo.setAttribute('aria-expanded', 'true');
+            try {
+                const respuesta = await fetch(`${contenedor.dataset.endpoint}?q=${encodeURIComponent(consulta)}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                });
+                if (!respuesta.ok) throw new Error('No se pudo completar la búsqueda.');
+                const datos = await respuesta.json();
+                if (consultaActiva === consulta) pintarResultados(datos.resultados || []);
+            } catch (error) {
+                if (consultaActiva === consulta) lista.textContent = error.message;
+            }
+        }, 220);
+    });
+
+    // Evito que Enter navegue a una búsqueda antigua de una sola página.
+    contenedor.querySelector('form').addEventListener('submit', (evento) => evento.preventDefault());
+
+    // Mantengo el desplegable abierto al pulsar dentro y lo cierro al salir.
+    document.addEventListener('click', (evento) => {
+        if (!contenedor.contains(evento.target)) {
+            lista.hidden = true;
+            campo.setAttribute('aria-expanded', 'false');
+        }
+    });
+    // Cierro la vista previa cuando se presiona Escape.
+    campo.addEventListener('keydown', (evento) => {
+        if (evento.key === 'Escape') {
+            lista.hidden = true;
+            campo.setAttribute('aria-expanded', 'false');
+        }
+    });
+});
+</script>

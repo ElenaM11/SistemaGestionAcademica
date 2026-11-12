@@ -48,8 +48,8 @@
 
     const csrf = document.querySelector('.app-main').dataset.csrf;
     const card = document.getElementById('usuariosCard');
-    const searchForm = document.querySelector('.search-box');
-    const input = searchForm.querySelector('input[name="q"]');
+    const searchForm = document.querySelector('.admin-table-search');
+    const input = searchForm?.querySelector('input[name="q"]');
     let timer, ctrl;
 
     // Pide solo la tabla al servidor y la reemplaza (sin recargar la página)
@@ -79,15 +79,17 @@
     }
 
     // Búsqueda mientras escribes (espera 300 ms sin teclear)
-    input.addEventListener('input', () => {
-        clearTimeout(timer);
-        timer = setTimeout(() => cargar(urlCon({ q: input.value.trim() })), 300);
-    });
-    searchForm.addEventListener('submit', e => {      // Enter: busca al instante
-        e.preventDefault();
-        clearTimeout(timer);
-        cargar(urlCon({ q: input.value.trim() }));
-    });
+    if (input && searchForm) {
+        input.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => cargar(urlCon({ q: input.value.trim() })), 300);
+        });
+        searchForm.addEventListener('submit', e => {
+            e.preventDefault();
+            clearTimeout(timer);
+            cargar(urlCon({ q: input.value.trim() }));
+        });
+    }
 
     // Paginador: cambia de página sin recargar
     card.addEventListener('click', e => {

@@ -8,10 +8,7 @@
         <span class="logo-text">da | vinci</span>
         <div class="logo-sub">EDUCATIVO</div>
     </a>
-    <form class="search-box" method="get" action="{{ search_url|default:dash_url }}" role="search">
-        <input type="search" name="q" value="{{ q|default:'' }}" maxlength="100"
-               placeholder="Buscar" aria-label="Buscar" autocomplete="off">
-    </form>
+    {% include 'components/global_search.html' %}
     <div class="user-info">
         <a href="{% url 'perfil' %}" class="profile-link" title="Mi perfil">
             <div>

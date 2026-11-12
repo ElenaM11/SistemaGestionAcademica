@@ -10,11 +10,102 @@ from django.contrib import messages
 from django.contrib.auth.hashers import make_password, check_password
 from django.db import transaction, IntegrityError
 from django.http import JsonResponse
+from django.urls import reverse
 from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET
+from django.db.models import Q
 
 # Modelos locales
 from rol.models import Rol
 from .models import Usuario, Estudiante, Docente
+
+
+@require_GET
+def api_buscar_personas(request):
+    """Busco contactos activos por nombre, apellidos, correo, CI o código de estudiante."""
+    usuario = _usuario_actual(request)
+    if not usuario or not usuario.estado:
+        return JsonResponse({'resultados': []}, status=401)
+
+    consulta = request.GET.get('q', '').strip()[:100]
+    if len(consulta) < 2:
+        return JsonResponse({'resultados': []})
+
+    rol_actual = usuario.rol.nombre
+    if rol_actual not in ('Administrador', 'Docente', 'Estudiante'):
+        return JsonResponse({'resultados': []}, status=403)
+
+    visibles = Usuario.objects.filter(estado=True).exclude(pk=usuario.pk)
+    if rol_actual != 'Administrador':
+        visibles = visibles.filter(rol__nombre__in=('Docente', 'Estudiante'))
+
+    for termino in consulta.split():
+        coincidencia = (
+            Q(nombres__icontains=termino) | Q(ap_pat__icontains=termino) |
+            Q(ap_mat__icontains=termino) | Q(correo__icontains=termino) |
+            Q(ci__icontains=termino) | Q(estudiante__codigo_estudiante__icontains=termino) |
+            Q(docente__especialidad__icontains=termino)
+        )
+        visibles = visibles.filter(coincidencia)
+
+    resultados = []
+    for persona in visibles.select_related('rol').order_by('ap_pat', 'nombres').distinct()[:15]:
+        url_perfil = reverse('persona_perfil', args=[persona.pk])
+        url_mensaje = ''
+        if rol_actual in ('Docente', 'Estudiante'):
+            if rol_actual == 'Estudiante':
+                url_mensaje = f"{reverse('estudiante_mensajes')}?con={persona.pk}"
+            else:
+                from cursos.models import Paralelo
+                curso_id = (Paralelo.objects.filter(docente_id=usuario.pk, estado='ACTIVO')
+                            .order_by('pk').values_list('curso_id', flat=True).first())
+                if curso_id:
+                    url_mensaje = f"{reverse('docente_mensajes', args=[curso_id])}?con={persona.pk}"
+        resultados.append({
+            'id': persona.pk,
+            'nombre': f'{persona.nombres} {persona.ap_pat or ""} {persona.ap_mat or ""}'.strip(),
+            'correo': persona.correo,
+            'rol': persona.rol.nombre,
+            'iniciales': (persona.nombres[:1] + (persona.ap_pat or '')[:1]).upper(),
+            'perfil_url': url_perfil,
+            'mensaje_url': url_mensaje,
+        })
+    return JsonResponse({'resultados': resultados})
+
+
+def persona_perfil(request, id_usuario):
+    """Muestro el perfil básico de una persona visible para el usuario de la sesión."""
+    actual = _usuario_actual(request)
+    if not actual or not actual.estado:
+        return redirect('login')
+
+    persona = get_object_or_404(Usuario.objects.select_related('rol'), id_usuario=id_usuario, estado=True)
+    if actual.rol.nombre != 'Administrador':
+        from comunicacion.permisos import pueden_conversar
+        if not pueden_conversar(actual.pk, persona.pk):
+            from django.http import HttpResponseForbidden
+            return HttpResponseForbidden('No tienes permiso para ver este perfil.')
+
+    rol = actual.rol.nombre.lower()
+    mensaje_url = ''
+    if actual.rol.nombre == 'Estudiante':
+        mensaje_url = f"{reverse('estudiante_mensajes')}?con={persona.pk}"
+    elif actual.rol.nombre == 'Docente':
+        from cursos.models import Paralelo
+        curso_id = (Paralelo.objects.filter(docente_id=actual.pk, estado='ACTIVO')
+                    .order_by('pk').values_list('curso_id', flat=True).first())
+        if curso_id:
+            mensaje_url = f"{reverse('docente_mensajes', args=[curso_id])}?con={persona.pk}"
+    return render(request, 'accounts/persona_perfil.html', {
+        'usuario_actual': actual,
+        'persona': persona,
+        'rol_actual': actual.rol.nombre,
+        'iniciales_actual': (actual.nombres[:1] + (actual.ap_pat or '')[:1]).upper(),
+        'iniciales_persona': (persona.nombres[:1] + (persona.ap_pat or '')[:1]).upper(),
+        'sidebar_template': SIDEBARS.get(rol),
+        'es_admin': rol == 'administrador',
+        'mensaje_url': mensaje_url,
+    })
 
 # CONSTANTES
 

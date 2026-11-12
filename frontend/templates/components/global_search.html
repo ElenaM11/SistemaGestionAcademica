@@ -1,0 +1,11 @@
+<div class="global-search" data-endpoint="{% url 'api_buscar_personas' %}">
+    <form class="search-box" role="search" autocomplete="off">
+        <label class="visually-hidden" for="busqueda-global">Buscar personas</label>
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input id="busqueda-global" type="search" name="q" maxlength="100"
+               placeholder="Buscar personas por nombre, correo o código"
+               aria-label="Buscar personas por nombre, apellido, correo o código"
+               aria-autocomplete="list" aria-controls="resultados-busqueda-global" aria-expanded="false">
+        <div class="global-search-results" id="resultados-busqueda-global" role="listbox" hidden></div>
+    </form>
+</div>

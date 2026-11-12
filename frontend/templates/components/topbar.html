@@ -2,19 +2,11 @@
     <button class="hamburger-btn" id="hamburgerBtn" aria-label="Abrir menú">
         <i class="bi bi-list"></i>
     </button>
-    <a class="brand" href="#">
+    <a class="brand" href="{% if user_role == 'Estudiante' %}{% url 'estudiante_dashboard' %}{% elif user_role == 'Docente' %}{% url 'docente_dashboard' %}{% else %}{% url 'admin_dashboard' %}{% endif %}">
         <span class="logo-text">da | vinci</span>
         <div class="logo-sub">EDUCATIVO</div>
     </a>
-    
-    {% if show_search|default:True %}
-    {% url 'admin_dashboard' as dash_url %}
-    <form class="search-box" method="get" action="{{ search_url|default:dash_url }}" role="search">
-        <input type="search" name="q" value="{{ q|default:'' }}" maxlength="100"
-               placeholder="Buscar por nombre, correo, CI o código" aria-label="Buscar usuarios" autocomplete="off">
-    </form>
-    {% endif %}
-
+    {% include 'components/global_search.html' %}
     <div class="user-info">
         <a href="{% url 'perfil' %}" class="profile-link" title="Mi perfil">
             <div>

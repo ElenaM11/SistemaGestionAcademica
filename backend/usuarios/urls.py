@@ -12,6 +12,8 @@ urlpatterns = [
     path('panel/usuarios/<int:id_usuario>/estado/', views.admin_toggle_estado, name='admin_toggle_estado'),
     path('panel/usuarios/<int:id_usuario>/reset-password/', views.admin_reset_password, name='admin_reset_password'),
     path('perfil/', views.perfil, name='perfil'),
+    path('personas/<int:id_usuario>/', views.persona_perfil, name='persona_perfil'),
+    path('api/personas/buscar/', views.api_buscar_personas, name='api_buscar_personas'),
     path('cambiar-password/', views.cambiar_password, name='cambiar_password'),
     path('api/correo-docente/', views.api_correo_docente, name='api_correo_docente'),
 ]
