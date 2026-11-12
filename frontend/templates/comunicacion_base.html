@@ -5,10 +5,12 @@
 {% block topbar %}{% endblock %}
 {% block nav %}{% endblock %}
 <main class="app-main{% block main_class %}{% endblock %}">
+    {% block page_banner %}
     <section class="course-banner course-banner--slim purple-banner">
         <h2>{% block banner_titulo %}{% endblock %}</h2>
         <p>{% block banner_texto %}{% endblock %}</p>
     </section>
+    {% endblock %}
     {% block tabs %}{% endblock %}
     {% for m in messages %}
     <div class="alert alert-{% if m.tags == 'error' %}danger{% else %}{{ m.tags|default:'info' }}{% endif %}" role="alert">{{ m }}</div>

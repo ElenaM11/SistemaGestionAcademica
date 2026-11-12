@@ -1,12 +1,10 @@
 {% extends 'comunicacion_base.html' %}
-{# Chat estilo Teams para docentes y estudiantes (docente<->estudiante, docente<->docente, estudiante<->estudiante).
-   Contexto: rol_ui, conversaciones, abierta (usuario, iniciales, rol, mensajes, ultimo_dia) o None, grupos, mi_id, ws_ruta. #}
 {% block title %}Mensajes - Da Vinci{% endblock %}
 {% block main_class %} app-main--chat{% endblock %}
 {% block topbar %}{% if rol_ui == 'docente' %}{% include 'components/topbar_docente.html' %}{% else %}{% include 'components/topbar_estudiante.html' %}{% endif %}{% endblock %}
 {% block nav %}{% if rol_ui == 'docente' %}{% include 'components/docente_nav.html' with active_rail='chat' nav_url_name='docente_mensajes' %}{% else %}{% include 'components/estudiante_nav.html' with active_rail='chat' %}{% endif %}{% endblock %}
-{% block banner_titulo %}Mensajes{% endblock %}
-{% block banner_texto %}{% if rol_ui == 'docente' %}Habla con tus estudiantes y con otros docentes{% else %}Habla con tus docentes y compañeros{% endif %}{% endblock %}
+{% block page_banner %}{% endblock %}
+{% block banner_texto %}{% endblock %}
 {% block tabs %}{% include 'components/comunicacion_tabs.html' with tab_activa='mensajes' %}{% endblock %}
 
 {% block contenido %}
