@@ -3,6 +3,7 @@
 {% block content %}
 {% if es_admin %}
     {% include 'components/topbar.html' with user_name=usuario_actual.nombres user_role=rol_actual initials=iniciales_actual %}
+    {% include 'components/sidebar_admin.html' with active_tab='' %}
 {% elif rol_actual == 'Docente' %}
     {% include 'components/topbar_docente.html' with usuario=usuario_actual %}
     {% include 'components/docente_nav.html' %}
@@ -10,19 +11,34 @@
     {% include 'components/topbar_estudiante.html' with usuario=usuario_actual %}
     {% include 'components/estudiante_nav.html' %}
 {% endif %}
-<main class="app-main">
-    <section class="person-profile-card">
-        <div class="global-search-avatar global-search-avatar--large">{{ iniciales_persona }}</div>
-        <div>
-            <p class="text-muted mb-1">{{ persona.rol.nombre }}</p>
-            <h1>{{ persona.nombres }} {{ persona.ap_pat|default:'' }} {{ persona.ap_mat|default:'' }}</h1>
-            <p class="mb-0">{{ persona.correo }}</p>
-        </div>
-        {% if mensaje_url %}
-        <a class="btn btn-primary ms-auto" href="{{ mensaje_url }}">
-            <i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Enviar mensaje
-        </a>
-        {% endif %}
-    </section>
+<main class="app-main{% if es_admin %} no-panel{% endif %}">
+    <div class="person-profile-page">
+        <header class="purple-banner person-profile-banner">
+            <h2>Perfil de persona</h2>
+            <p>Información de contacto de Da Vinci Educativo.</p>
+        </header>
+        <section class="person-profile-card table-custom" aria-label="Perfil de {{ persona.nombres }}">
+            <div class="person-profile-head">
+                <div class="person-profile-avatar" aria-hidden="true">{{ iniciales_persona }}</div>
+                <div class="person-profile-identity">
+                    <span class="person-profile-label">Perfil institucional</span>
+                    <h1>{{ persona.nombres }} {{ persona.ap_pat|default:'' }} {{ persona.ap_mat|default:'' }}</h1>
+                    <span class="role-badge {% if persona.rol.nombre == 'Administrador' %}admin{% elif persona.rol.nombre == 'Docente' %}docente{% else %}estudiante{% endif %}">{{ persona.rol.nombre }}</span>
+                </div>
+                {% if mensaje_url %}
+                <a class="btn btn-primary-custom person-profile-action" href="{{ mensaje_url }}">
+                    <i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Enviar mensaje
+                </a>
+                {% endif %}
+            </div>
+            <div class="person-profile-contact">
+                <span class="person-profile-contact-icon" aria-hidden="true"><i class="bi bi-envelope"></i></span>
+                <div>
+                    <span class="person-profile-contact-label">Correo electrónico</span>
+                    <a href="mailto:{{ persona.correo }}">{{ persona.correo }}</a>
+                </div>
+            </div>
+        </section>
+    </div>
 </main>
 {% endblock %}
