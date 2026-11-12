@@ -20,6 +20,78 @@ from .services import (
 
 from asistente_ia.cuestionario import preguntas_publicas
 from asistente_ia.persistencia import intentos_por_pregunta
+from django.http import HttpResponseForbidden
+from django.contrib import messages
+from django.db import IntegrityError
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.dateparse import parse_time
+from django.utils import timezone
+from rest_framework.exceptions import ValidationError
+from actividades.models import Actividad
+from actividades.services_progreso import progreso_paralelo
+
+from usuarios.models import Docente, Estudiante, Usuario
+
+from .models import Curso, DocenteIdioma, EstudianteParalelo, Idioma, Nivel, Paralelo, Programa, Turno
+from .serializers import CursoSerializer, ParaleloActualizarSerializer, ParaleloEntradaSerializer
+from .services import (
+    asignar_docente, actualizar_paralelo, crear_elemento_catalogo, crear_o_actualizar_curso,
+    crear_paralelo, docente_disponible_para_horarios, inscribir_estudiante, listar_paralelos_disponibles,
+    habilitar_idioma_docente, retirar_inscripcion,
+)
+
+from asistente_ia.cuestionario import preguntas_publicas
+from asistente_ia.persistencia import intentos_por_pregunta
+
+
+def docente_curso_resumen_pagina(request, curso_id):
+    usuario, respuesta = validar_rol_pagina(request, 'Docente')
+    if respuesta:
+        return respuesta
+    docente = get_object_or_404(Docente, pk=usuario.pk)
+    curso = get_object_or_404(Curso.objects.select_related('idioma', 'nivel'), pk=curso_id)
+    
+    paralelos = Paralelo.objects.filter(docente=docente, curso=curso, estado='ACTIVO').select_related('turno').prefetch_related('horarios')
+    if not paralelos.exists():
+        return HttpResponseForbidden('No tienes acceso a este curso.')
+        
+    paralelo = paralelos.first() # Asumimos el primer paralelo para el resumen general
+    
+    progreso = progreso_paralelo(paralelo)
+    
+    total_estudiantes = len(progreso)
+    promedio_general = 0
+    entregas_totales = 0
+    entregas_esperadas = 0
+    asistencia_promedio = 0
+    
+    if total_estudiantes > 0:
+        promedios = [p['promedio'] for p in progreso if p['promedio'] is not None]
+        if promedios:
+            promedio_general = round(sum(promedios) / len(promedios), 1)
+            
+        entregas_totales = sum(p['entregadas'] for p in progreso)
+        entregas_esperadas = sum(p['total_actividades'] for p in progreso)
+        
+        asistencias = [p['asistencia_pct'] for p in progreso if p['asistencia_pct'] is not None]
+        if asistencias:
+            asistencia_promedio = round(sum(asistencias) / len(asistencias), 1)
+
+    return render(request, 'docente/resumen_curso.html', {
+        'usuario': usuario,
+        'curso': curso,
+        'paralelo': paralelo,
+        'paralelos': paralelos,
+        'total_estudiantes': total_estudiantes,
+        'promedio_general': promedio_general,
+        'entregas_totales': entregas_totales,
+        'entregas_esperadas': entregas_esperadas,
+        'asistencia_promedio': asistencia_promedio,
+        'active_rail': 'equipos',
+        'nav_url_name': 'docente_curso_resumen'
+    })
+
 
 def registrar_error_pagina(request, error):
     """Muestro errores de validación con mensajes legibles en español."""

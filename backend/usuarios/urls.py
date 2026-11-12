@@ -16,4 +16,6 @@ urlpatterns = [
     path('api/personas/buscar/', views.api_buscar_personas, name='api_buscar_personas'),
     path('cambiar-password/', views.cambiar_password, name='cambiar_password'),
     path('api/correo-docente/', views.api_correo_docente, name='api_correo_docente'),
+    path('panel/credenciales/enviar/', views.admin_enviar_credenciales, name='admin_enviar_credenciales'),
+    path('panel/avisos/enviar/', views.admin_enviar_aviso, name='admin_enviar_aviso'),
 ]

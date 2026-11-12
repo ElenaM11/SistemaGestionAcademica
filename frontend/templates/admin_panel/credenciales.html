@@ -18,8 +18,12 @@
                 <dt class="col-sm-4 text-muted fw-normal">Usuario</dt>
                 <dd class="col-sm-8">{{ cred.nombre }} <span class="role-badge ms-1">{{ cred.rol }}</span></dd>
 
-                <dt class="col-sm-4 text-muted fw-normal">Correo</dt>
+                <dt class="col-sm-4 text-muted fw-normal">Correo institucional</dt>
                 <dd class="col-sm-8">{{ cred.correo }}</dd>
+
+                <!-- NUEVO: Mostrar correo personal -->
+                <dt class="col-sm-4 text-muted fw-normal">Correo personal</dt>
+                <dd class="col-sm-8">{{ cred.correo_personal|default:"No registrado" }}</dd>
 
                 <dt class="col-sm-4 text-muted fw-normal">Contraseña inicial</dt>
                 <dd class="col-sm-8 mb-0">
@@ -39,10 +43,37 @@
             </div>
         </div>
 
-        <div class="mt-4 d-flex gap-2 justify-content-end flex-wrap">
-            <button type="button" id="btnFinalizar" class="btn btn-secondary-custom">Finalizar</button>
-            <button type="button" id="btnPdf" class="btn btn-primary-custom"><i class="bi bi-file-earmark-pdf me-1"></i> Descargar PDF</button>
+        <!-- ALERTA PARA MENSAJES DE ENVÍO -->
+        <div id="alerta-correo" class="alert d-none mt-4" role="alert"></div>
+
+        <!-- DISEÑO DE BOTONES TIPO TARJETA (COMO LA IMAGEN) -->
+        <div class="row g-3 mt-2">
+            <div class="col-md-6">
+                <button type="button" id="btnPdf" class="btn btn-outline-secondary w-100 py-3 d-flex flex-column align-items-center gap-2 border-2" style="border-radius: 12px;">
+                    <i class="bi bi-printer fs-3 text-dark"></i>
+                    <div>
+                        <div class="fw-bold text-dark fs-5">Imprimir</div>
+                        <div class="text-muted small fw-normal">Funcionalidad existente</div>
+                    </div>
+                </button>
+            </div>
+            <div class="col-md-6">
+                <!-- El botón se deshabilita automáticamente si no hay correo personal -->
+                <button type="button" id="btnEnviarCorreo" class="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center gap-2 border-2" style="border-radius: 12px;"
+                        {% if not cred.correo_personal %}disabled title="No hay correo personal registrado"{% endif %}>
+                    <i class="bi bi-envelope fs-3"></i>
+                    <div>
+                        <div class="fw-bold fs-5">Enviar correo</div>
+                        <div class="text-muted small fw-normal">Nueva funcionalidad</div>
+                    </div>
+                </button>
+            </div>
         </div>
+
+        <div class="mt-4 d-flex justify-content-end">
+            <button type="button" id="btnFinalizar" class="btn btn-secondary-custom">Finalizar</button>
+        </div>
+        
         <p class="text-muted mt-3 mb-0" style="font-size:.85rem;" id="nota">
             Las credenciales se eliminan del sistema al descargar el PDF o al pulsar Finalizar. Después no se podrán volver a ver.
         </p>
@@ -128,12 +159,61 @@
         doc.save('credenciales_' + cred.correo.split('@')[0] + '.pdf');
     }
 
+    // --- LÓGICA DEL BOTÓN IMPRIMIR/PDF ---
     document.getElementById('btnPdf').addEventListener('click', async () => {
         generarPDF();
         await limpiarSesion();
         document.getElementById('btnPdf').disabled = true;
+        document.getElementById('btnEnviarCorreo').disabled = true; // Deshabilitar también el de correo
         document.getElementById('nota').textContent = 'PDF descargado. Las credenciales ya se eliminaron del sistema.';
     });
+
+    // --- LÓGICA DEL BOTÓN ENVIAR CORREO ---
+    const btnEnviar = document.getElementById('btnEnviarCorreo');
+    const alertaCorreo = document.getElementById('alerta-correo');
+
+    if (btnEnviar) {
+        btnEnviar.addEventListener('click', async () => {
+            btnEnviar.disabled = true;
+            const originalHTML = btnEnviar.innerHTML;
+            btnEnviar.innerHTML = `
+                <div class="spinner-border text-primary mb-1" role="status" style="width: 2rem; height: 2rem;"></div>
+                <div><div class="fw-bold fs-5">Enviando...</div></div>
+            `;
+            
+            alertaCorreo.classList.add('d-none'); // Ocultar alerta previa
+
+            try {
+                const response = await fetch("{% url 'admin_enviar_credenciales' %}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': main.dataset.csrf,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                alertaCorreo.classList.remove('d-none', 'alert-success', 'alert-danger');
+                if (data.ok) {
+                    alertaCorreo.classList.add('alert-success');
+                    alertaCorreo.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i> ${data.mensaje}`;
+                } else {
+                    alertaCorreo.classList.add('alert-danger');
+                    alertaCorreo.innerHTML = `<i class="bi bi-x-circle-fill me-2"></i> ${data.error || 'Error al enviar el correo.'}`;
+                }
+            } catch (e) {
+                alertaCorreo.classList.remove('d-none', 'alert-success');
+                alertaCorreo.classList.add('alert-danger');
+                alertaCorreo.innerHTML = `<i class="bi bi-wifi-off me-2"></i> Error de conexión con el servidor.`;
+            } finally {
+                btnEnviar.innerHTML = originalHTML;
+                // Esperamos 3 segundos antes de permitir un nuevo envío para evitar spam
+                setTimeout(() => { 
+                    if (!document.getElementById('btnPdf').disabled) btnEnviar.disabled = false; 
+                }, 3000);
+            }
+        });
+    }
 
     document.getElementById('btnFinalizar').addEventListener('click', async () => {
         if (!document.getElementById('btnPdf').disabled &&

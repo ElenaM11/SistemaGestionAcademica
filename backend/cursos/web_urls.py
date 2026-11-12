@@ -1,5 +1,3 @@
-"""Publico las rutas del módulo académico solicitadas para la aplicación web."""
-
 from django.urls import path
 
 from rol.views import admin_dashboard
@@ -9,9 +7,8 @@ from .page_views import (
     asignar_docente_pagina, catalogo_cursos_pagina, catalogos_pagina,
     estudiantes_curso_pagina, inscripciones_pagina, paralelos_pagina,
     modulo_estudiante, progreso_docente_pagina, resumen_admin_pagina,
-    cuestionario_estudiante_pagina,
+    cuestionario_estudiante_pagina, docente_curso_resumen_pagina, # <-- IMPORTAMOS LA NUEVA
 )
-
 
 urlpatterns = [
     path('admin/dashboard/', admin_dashboard, name='admin_dashboard_alias'),
@@ -22,6 +19,9 @@ urlpatterns = [
     path('admin/cursos/asignar-docente/', asignar_docente_pagina, name='admin_asignar_docente'),
     path('admin/cursos/inscripciones/', inscripciones_pagina, name='admin_inscripciones'),
     path('docente/cursos/<int:curso_id>/estudiantes/', estudiantes_curso_pagina, name='docente_estudiantes_curso'),
+    
+    path('docente/cursos/<int:curso_id>/resumen/', docente_curso_resumen_pagina, name='docente_curso_resumen'),
+    
     path('estudiante/academico/', modulo_estudiante, name='estudiante_academico'),
     path('estudiante/cuestionario/<int:actividad_id>/', cuestionario_estudiante_pagina, name='estudiante_cuestionario'),
     path('docente/progreso/', progreso_docente_pagina, name='docente_progreso'),

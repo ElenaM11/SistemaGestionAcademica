@@ -1,11 +1,157 @@
+<style>
+    /* Contenedor principal de los videos */
+    .sala-stage {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        padding: 10px;
+    }
+
+    .participant-grid {
+        display: grid;
+        gap: 16px; /* Un poco más de separación entre tarjetas */
+        width: 100%;
+        height: 100%;
+        align-content: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    /* Estilos de cada tarjeta de video (AHORA CLARA) */
+    .participant-card {
+        position: relative;
+        background-color: #f8f9fa; /* Gris muy claro, casi blanco */
+        border: 1px solid #e5e7ee; /* Borde sutil para delimitar */
+        border-radius: 16px; /* Bordes más redondeados */
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+        min-height: 160px;
+        display: flex;
+        flex-direction: column; /* Para apilar avatar, nombre, etc. */
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04); /* Sombra muy suave */
+    }
+
+    /* El video siempre cubre toda la tarjeta sin deformarse */
+    .participant-card video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 1; /* El video va por encima del fondo */
+    }
+
+    /* Textos dentro de la tarjeta */
+    .participant-name, .participant-role, .participant-card .pill {
+        z-index: 2; /* Por encima del video por si acaso */
+        position: relative;
+        text-shadow: none; /* Quitamos la sombra oscura */
+        color: #333; /* Texto oscuro para que se lea en fondo claro */
+    }
+
+    /* Si hay video, el texto necesita fondo para leerse */
+    .participant-card.has-video .participant-name,
+    .participant-card.has-video .participant-role,
+    .participant-card.has-video .pill {
+        color: white;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        background: rgba(0, 0, 0, 0.4);
+        padding: 2px 8px;
+        border-radius: 6px;
+        margin-bottom: 4px;
+    }
+
+    /* Ajuste para el avatar cuando no hay cámara */
+    .participant-card .avatar {
+        z-index: 2;
+        position: relative;
+        margin-bottom: 8px;
+    }
+
+    /* --- DISTRIBUCIÓN DINÁMICA SEGÚN CANTIDAD --- */
+
+    /* 1 PERSONA: Ocupa toda la pantalla */
+    .participant-grid[data-count="1"] {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr;
+    }
+
+    /* 2 PERSONAS: Mitad y mitad */
+    @media (min-width: 768px) {
+        .participant-grid[data-count="2"] {
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr;
+        }
+    }
+
+    /* 3 y 4 PERSONAS: Cuadrícula 2x2 */
+    @media (min-width: 768px) {
+        .participant-grid[data-count="3"],
+        .participant-grid[data-count="4"] {
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+        }
+        .participant-grid[data-count="3"] > :first-child {
+            grid-column: span 2;
+        }
+    }
+
+    /* 5 y 6 PERSONAS: Cuadrícula 3x2 */
+    @media (min-width: 768px) {
+        .participant-grid[data-count="5"],
+        .participant-grid[data-count="6"] {
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+        }
+    }
+
+    /* 7 u 8 PERSONAS: Cuadrícula 4x2 (por si acaso) */
+    @media (min-width: 768px) {
+        .participant-grid[data-count="7"],
+        .participant-grid[data-count="8"] {
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+        }
+    }
+
+    /* En celulares, siempre 1 columna */
+    @media (max-width: 767px) {
+        .participant-grid {
+            grid-template-columns: 1fr !important;
+            grid-template-rows: auto !important;
+        }
+        .participant-card {
+            min-height: 200px;
+        }
+    }
+</style>
+
 <div id="avisoSala" class="alert alert-warning d-none" role="alert"></div>
 <div class="live-summary">
     <span class="pill pill--lg" id="estadoAudio">Conectando…</span>
     <span class="live-count" id="contadorParticipantes"></span>
     <button type="button" class="btn btn-secondary-custom btn-sm d-none" id="btnAudio">Activar el audio de la clase</button>
 </div>
+
 <div class="sala-stage">
     <div id="pantallaCompartida" class="screen-share d-none" aria-label="Pantalla compartida"></div>
-    <div class="participant-grid" id="grillaParticipantes"></div>
+    <div class="participant-grid" id="grillaParticipantes" data-count="0"></div>
 </div>
+
+<!-- Controles de paginación ajustados para fondo claro -->
+<div class="d-flex justify-content-center align-items-center gap-3 mt-2 mb-3" id="controlesPaginacion" style="display: none;">
+    <button class="btn btn-sm btn-outline-secondary" id="btnPrevPagina" aria-label="Página anterior">
+        <i class="bi bi-chevron-left"></i> Anterior
+    </button>
+    <span class="text-dark fw-bold" id="infoPagina" style="font-size: 0.9rem;">Página 1 de 1</span>
+    <button class="btn btn-sm btn-outline-secondary" id="btnNextPagina" aria-label="Página siguiente">
+        Siguiente <i class="bi bi-chevron-right"></i>
+    </button>
+</div>
+
 <div id="audios" hidden></div>

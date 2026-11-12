@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR.parent / ".env")
+
+load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = True
@@ -156,3 +157,7 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 ASISTENTE_IA_MAX_INTENTOS = 3
 ASISTENTE_IA_GUARDAR = False   # ver punto 6
+
+# Configuración de Google Apps Script 
+GOOGLE_SCRIPT_URL = os.getenv('GOOGLE_SCRIPT_URL', '')
+GOOGLE_SCRIPT_SECRET = os.getenv('GOOGLE_SCRIPT_SECRET', '')

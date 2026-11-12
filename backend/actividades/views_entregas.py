@@ -10,6 +10,8 @@ from usuarios.contexto import contexto_curso, inscripciones_activas, texto_error
 from usuarios.decorators import docente_requerido
 from usuarios.models import Estudiante
 from .models import Actividad, Entrega
+from notificaciones.models import Notificacion
+
 
 def _estado(entrega):
     if entrega is None:
@@ -19,6 +21,7 @@ def _estado(entrega):
     if not entrega.contenido_texto and not entrega.archivo:
         return "sin_entregar"
     return "tardia" if entrega.es_tardia else "entregada"
+
 
 def _parsear_feedback(contenido):
     if not contenido:
@@ -31,12 +34,13 @@ def _parsear_feedback(contenido):
         pass
     return None
 
+
 @docente_requerido
 def docente_entregas(request, curso_id, pk):
     ctx = contexto_curso(request, curso_id)
     actividad = get_object_or_404(
         Actividad.objects.select_related("paralelo"),
-        pk=pk, paralelo__docente=request.docente, paralelo__curso_id=curso_id,  
+        pk=pk, paralelo__docente=request.docente, paralelo__curso_id=curso_id,
     )
     inscripciones = list(inscripciones_activas(actividad.paralelo))
     entregas_db = {e.estudiante_id: e for e in actividad.entregas.all()}
@@ -46,7 +50,7 @@ def docente_entregas(request, curso_id, pk):
     if request.method == "POST":
         elegido = request.POST.get("estudiante")
         entrega = entregas_db.get(int(elegido)) if elegido and elegido.isdigit() else None
-        
+
         # Si no hay entrega, permitimos crear una vacía si el docente decide calificar
         if entrega is None and elegido and elegido.isdigit():
             est_obj = Estudiante.objects.filter(pk=int(elegido)).first()
@@ -64,11 +68,34 @@ def docente_entregas(request, curso_id, pk):
             except InvalidOperation:
                 error = "Ingresa una calificación válida."
             else:
+                # Capturamos el estado ANTES de calificar para no duplicar notificaciones
+                ya_estaba_calificada = (
+                    entrega.estado == Entrega.Estado.CALIFICADA
+                )
                 try:
-                    entrega.calificar(request.docente, nota, request.POST.get("observaciones", "").strip())
+                    entrega.calificar(
+                        request.docente,
+                        nota,
+                        request.POST.get("observaciones", "").strip(),
+                    )
                 except ValidationError as e:
                     error = texto_error(e)
                 else:
+                    # Notificar al estudiante solo si es la primera calificación
+                    if not ya_estaba_calificada and hasattr(entrega.estudiante, "usuario"):
+                        url_tarea = reverse("estudiante_academico") + (
+                            f"?vista=tareas&actividad={entrega.actividad_id}"
+                        )
+                        Notificacion.objects.create(
+                            usuario=entrega.estudiante.usuario,
+                            tipo=Notificacion.Tipo.CALIFICACION,
+                            mensaje=(
+                                f"Tu tarea '{entrega.actividad.titulo}' "
+                                f"ha sido calificada."
+                            ),
+                            url_destino=url_tarea,
+                        )
+
                     messages.success(request, "Calificación guardada.")
                     url = reverse("docente_entregas", args=[curso_id, pk])
                     return redirect(f"{url}?estudiante={elegido}")
@@ -103,11 +130,13 @@ def docente_entregas(request, curso_id, pk):
     )
     return render(request, "docente/entregas_calificar.html", ctx)
 
+
 @docente_requerido
 def docente_entrega_archivo(request, curso_id, pk, entrega_id):
     entrega = get_object_or_404(
         Entrega, pk=entrega_id, actividad_id=pk,
-        actividad__paralelo__docente=request.docente, actividad__paralelo__curso_id=curso_id,
+        actividad__paralelo__docente=request.docente,
+        actividad__paralelo__curso_id=curso_id,
     )
     if not entrega.archivo:
         raise Http404("Esta entrega no tiene archivo.")

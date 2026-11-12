@@ -19,6 +19,9 @@ from django.db.models import Q
 from rol.models import Rol
 from .models import Usuario, Estudiante, Docente
 
+# Servicio de notificaciones (NUEVO)
+from .services.notificaciones import enviar_credenciales
+
 
 @require_GET
 def api_buscar_personas(request):
@@ -159,6 +162,7 @@ def api_codigo_estudiante(request):
         request.GET.get('nombres'), request.GET.get('ap_pat'), request.GET.get('ap_mat'))
     return JsonResponse({'codigo': codigo, 'correo': correo_desde_codigo(codigo)})
 
+
 def api_correo_docente(request):
     if request.session.get('usuario_rol', '').lower() != 'administrador':
         return JsonResponse({'error': 'forbidden'}, status=403)
@@ -169,6 +173,7 @@ def api_correo_docente(request):
         request.GET.get('ap_mat')
     )
     return JsonResponse({'correo': correo})
+
 
 # UTILIDADES INTERNAS
 def _es_admin(request):
@@ -197,11 +202,14 @@ def _guardar_credenciales(request, usuario, password, titulo):
         'nombre': f'{usuario.nombres} {usuario.ap_pat} {usuario.ap_mat}'.strip(),
         'rol': rol,
         'correo': usuario.correo,
+        'correo_personal': usuario.correo_personal or '', # NUEVO
         'password': password,
         'aviso1': f'Comparte estos datos con el {rol.lower()}.',
         'aviso2': f'El {rol.lower()} deberá cambiar la contraseña al primer inicio de sesión.',
         'creado': time.time(),
     }
+
+
 # AUTENTICACIÓN
 def login_view(request):
     if request.method == 'POST':
@@ -245,6 +253,7 @@ def logout_view(request):
     request.session.flush()
     return redirect('login')
 
+
 # REGISTRO DE USUARIOS (solo admin)
 
 def admin_register_user(request):
@@ -254,18 +263,23 @@ def admin_register_user(request):
         
     if request.method != 'POST':
         return _form_registro(request)
+        
     p = request.POST
     nombres = p.get('nombres', '').strip()
     # Los apellidos ahora pueden venir vacíos
     ap_pat = p.get('ap_pat', '').strip()
     ap_mat = p.get('ap_mat', '').strip()
     ci, telefono = p.get('ci', '').strip(), p.get('telefono', '').strip()
+    correo_personal = p.get('correo_personal', '').strip() # NUEVO
+    
     try:
         rol = Rol.objects.get(pk=p.get('rol'))
     except (Rol.DoesNotExist, ValueError):
         messages.error(request, 'Rol inválido')
         return _form_registro(request, p)
+        
     rol_nombre = rol.nombre.lower()
+    
     # Validaciones de unicidad (solo si el campo no está vacío)
     if ci and Usuario.objects.filter(ci=ci).exists():
         messages.error(request, 'Ya existe un usuario con ese carnet de identidad')
@@ -273,6 +287,10 @@ def admin_register_user(request):
     if telefono and Usuario.objects.filter(telefono=telefono).exists():
         messages.error(request, 'Ya existe un usuario con ese número de teléfono')
         return _form_registro(request, p)
+    if correo_personal and Usuario.objects.filter(correo_personal=correo_personal).exists():
+        messages.error(request, 'Ese correo personal ya está registrado por otro usuario.')
+        return _form_registro(request, p)
+        
     # Validaciones específicas por rol
     if rol_nombre == 'estudiante':
         if not all(p.get(c, '').strip() for c in ('fecha_nacimiento', 'contacto_emergencia', 'telefono_emergencia')):
@@ -281,8 +299,10 @@ def admin_register_user(request):
     elif rol_nombre == 'docente' and not p.get('especialidad', '').strip():
         messages.error(request, 'Indica la especialidad del docente')
         return _form_registro(request, p)
+        
     # El sistema genera la contraseña
     password = generar_password()
+    
     # Crear usuario (reintenta si choca el código)
     for _ in range(3):
         try:
@@ -290,13 +310,18 @@ def admin_register_user(request):
                 if rol_nombre == 'estudiante':
                     codigo = generar_codigo_estudiante(nombres, ap_pat, ap_mat)
                     correo = correo_desde_codigo(codigo)
+                elif rol_nombre == 'docente':
+                    correo = generar_correo_docente(nombres, ap_pat, ap_mat)
+                elif rol_nombre == 'administrador':
+                    correo = generar_correo_admin(nombres, ap_pat, ap_mat)
                 else:
-                    # Generamos el correo automáticamente para docentes (y otros roles)
                     correo = generar_correo_docente(nombres, ap_pat, ap_mat)
 
                 usuario = Usuario.objects.create(
                     nombres=nombres, ap_pat=ap_pat, ap_mat=ap_mat, ci=ci,
-                    correo=correo, telefono=telefono, rol=rol,
+                    correo=correo, 
+                    correo_personal=correo_personal or None, # NUEVO
+                    telefono=telefono, rol=rol,
                     password_hash=make_password(password),
                     debe_cambiar_password=True,
                 )
@@ -342,6 +367,33 @@ def admin_credenciales_limpiar(request):
     request.session.pop('credenciales_nuevas', None)
     return JsonResponse({'ok': True})
 
+
+@require_POST
+def admin_enviar_credenciales(request):
+    """Endpoint AJAX para enviar credenciales al correo personal."""
+    if not _es_admin(request):
+        return JsonResponse({'ok': False, 'error': 'Sin permisos'}, status=403)
+        
+    cred = request.session.get('credenciales_nuevas')
+    if not cred:
+        return JsonResponse({'ok': False, 'error': 'No hay credenciales pendientes.'}, status=400)
+        
+    if time.time() - cred.get('creado', 0) > CRED_TTL:
+        return JsonResponse({'ok': False, 'error': 'Las credenciales han caducado.'}, status=400)
+
+    exito, mensaje = enviar_credenciales(
+        correo_personal=cred.get('correo_personal'),
+        nombre=cred.get('nombre'),
+        correo_institucional=cred.get('correo'),
+        password_temporal=cred.get('password'),
+        rol=cred.get('rol')
+    )
+    
+    if exito:
+        return JsonResponse({'ok': True, 'mensaje': mensaje})
+    return JsonResponse({'ok': False, 'error': mensaje})
+
+
 # EDITAR, ESTADO Y RESTABLECER CONTRASEÑA
 def admin_edit_user(request, id_usuario):
     if not _es_admin(request):
@@ -359,6 +411,7 @@ def admin_edit_user(request, id_usuario):
         'ap_mat': u.ap_mat or '',
         'ci': u.ci or '', 
         'correo': u.correo, 
+        'correo_personal': u.correo_personal or '', # NUEVO
         'telefono': u.telefono or '',
         'estado': '1' if u.estado else '0',
         'especialidad': doc.especialidad if doc and doc.especialidad else '',
@@ -382,6 +435,7 @@ def admin_edit_user(request, id_usuario):
     ap_pat = p.get('ap_pat', '').strip()
     ap_mat = p.get('ap_mat', '').strip()
     ci, telefono = p.get('ci', '').strip(), p.get('telefono', '').strip()
+    correo_personal = p.get('correo_personal', '').strip() # NUEVO
     
     # El correo NO se edita manualmente, se mantiene el que ya tiene el usuario
     correo = u.correo 
@@ -394,10 +448,14 @@ def admin_edit_user(request, id_usuario):
     if telefono and Usuario.objects.filter(telefono=telefono).exclude(id_usuario=u.id_usuario).exists():
         messages.error(request, 'Ya existe otro usuario con ese número de teléfono')
         return mostrar(p)
+    if correo_personal and Usuario.objects.filter(correo_personal=correo_personal).exclude(id_usuario=u.id_usuario).exists(): # NUEVO
+        messages.error(request, 'Ese correo personal ya está registrado por otro usuario')
+        return mostrar(p)
 
     with transaction.atomic():
         u.nombres, u.ap_pat, u.ap_mat = nombres, ap_pat, ap_mat
         u.ci, u.telefono, u.correo, u.estado = ci, telefono, correo, estado
+        u.correo_personal = correo_personal or None # NUEVO
         u.save()        
         if doc:
             doc.especialidad = p.get('especialidad', '').strip()
@@ -442,6 +500,7 @@ def admin_reset_password(request, id_usuario):
     _guardar_credenciales(request, u, password, 'Contraseña de {nombre} restablecida correctamente.')
     return redirect('admin_credenciales')
 
+
 # CAMBIO DE CONTRASEÑA Y PERFIL
 
 def _validar_password_segura(password, usuario=None):
@@ -469,6 +528,7 @@ def _validar_password_segura(password, usuario=None):
             return False, 'La contraseña no debe contener tu apellido.'
 
     return True, ''
+
 
 def cambiar_password(request):
     u = _usuario_actual(request)
@@ -538,6 +598,7 @@ def perfil(request):
         'extra': extra,
     })
 
+
 def generar_correo_docente(nombres, ap_pat, ap_mat):
     nombres = (nombres or '').strip()
     ap_pat = (ap_pat or '').strip()
@@ -550,8 +611,8 @@ def generar_correo_docente(nombres, ap_pat, ap_mat):
     # Usamos el apellido paterno, si no hay, el materno. Si no hay ninguno, usamos el nombre.
     apellido = ap_pat if ap_pat else (ap_mat if ap_mat else primer_nombre)
     
-    # Armamos el correo base (ej: jperez)
-    base = f"{inicial_nombre}{apellido}".lower()
+    # Armamos el correo base con el prefijo "doc" (ej: docjperez)
+    base = f"doc{inicial_nombre}{apellido}".lower()
     base = re.sub(r'[^a-z0-9]', '', base) # Limpiamos tildes o espacios
     
     # Aseguramos que sea único
@@ -562,3 +623,56 @@ def generar_correo_docente(nombres, ap_pat, ap_mat):
         contador += 1
         
     return correo
+
+
+def generar_correo_admin(nombres, ap_pat, ap_mat):
+    nombres = (nombres or '').strip()
+    ap_pat = (ap_pat or '').strip()
+    ap_mat = (ap_mat or '').strip()
+    
+    primer_nombre = nombres.split(' ')[0] if nombres else 'admin'
+    inicial_nombre = _inicial(primer_nombre)
+    apellido = ap_pat if ap_pat else (ap_mat if ap_mat else primer_nombre)
+    
+    # Armamos el correo base con el prefijo "admin" (ej: adminjperez)
+    base = f"admin{inicial_nombre}{apellido}".lower()
+    base = re.sub(r'[^a-z0-9]', '', base)
+    
+    correo = f"{base}@{DOMINIO}"
+    contador = 1
+    while Usuario.objects.filter(correo=correo).exists():
+        correo = f"{base}{contador}@{DOMINIO}"
+        contador += 1
+        
+    return correo
+
+
+from django.views.decorators.http import require_POST
+from notificaciones.models import Notificacion
+
+def admin_enviar_aviso(request):
+    if not _es_admin(request): 
+        return redirect('login')
+        
+    if request.method == 'POST':
+        mensaje = request.POST.get('mensaje', '').strip()
+        rol_destino = request.POST.get('rol_destino') # 'todos', 'estudiante', 'docente'
+        
+        if not mensaje:
+            messages.error(request, "El mensaje no puede estar vacío.")
+            return redirect('admin_enviar_aviso')
+            
+        usuarios = Usuario.objects.filter(estado=True)
+        if rol_destino != 'todos':
+            usuarios = usuarios.filter(rol__nombre__iexact=rol_destino)
+            
+        notificaciones = [
+            Notificacion(usuario=u, tipo=Notificacion.Tipo.AVISO, mensaje=mensaje)
+            for u in usuarios
+        ]
+        Notificacion.objects.bulk_create(notificaciones)
+        
+        messages.success(request, f"Aviso enviado a {len(notificaciones)} usuarios.")
+        return redirect('admin_dashboard')
+        
+    return render(request, 'admin_panel/enviar_aviso.html')

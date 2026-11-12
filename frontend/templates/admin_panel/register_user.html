@@ -41,13 +41,14 @@
                     <label for="nombres" class="form-label">Nombres</label>
                     <input type="text" class="form-control" id="nombres" name="nombres" value="{{ datos.nombres }}" required>
                 </div>
+                <!-- SE QUITÓ EL REQUIRED DE LOS APELLIDOS -->
                 <div class="col-md-3">
                     <label for="ap_pat" class="form-label">Apellido paterno</label>
-                    <input type="text" class="form-control" id="ap_pat" name="ap_pat" value="{{ datos.ap_pat }}" required>
+                    <input type="text" class="form-control" id="ap_pat" name="ap_pat" value="{{ datos.ap_pat }}">
                 </div>
                 <div class="col-md-3">
                     <label for="ap_mat" class="form-label">Apellido materno</label>
-                    <input type="text" class="form-control" id="ap_mat" name="ap_mat" value="{{ datos.ap_mat }}" required>
+                    <input type="text" class="form-control" id="ap_mat" name="ap_mat" value="{{ datos.ap_mat }}">
                 </div>
 
                 <!-- Estudiante: código generado (vista previa en tiempo real) -->
@@ -61,10 +62,18 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label for="correo" class="form-label">Correo electrónico</label>
+                    <label for="correo" class="form-label">Correo institucional</label>
                     <input type="email" class="form-control" id="correo" name="correo" value="{{ datos.correo }}" required>
                     <div class="form-text d-none" id="correoHint">Se genera con el código de estudiante.</div>
                 </div>
+
+                <!-- NUEVO CAMPO: CORREO PERSONAL -->
+                <div class="col-md-6">
+                    <label for="correo_personal" class="form-label">Correo personal (Opcional)</label>
+                    <input type="email" class="form-control" id="correo_personal" name="correo_personal" value="{{ datos.correo_personal }}" placeholder="ejemplo@gmail.com">
+                    <div class="form-text">Aquí se enviarán las credenciales de acceso.</div>
+                </div>
+
                 <div class="col-md-6">
                     <label for="ci" class="form-label">Carnet de identidad</label>
                     <input type="text" class="form-control" id="ci" name="ci" value="{{ datos.ci }}" placeholder="7845123 LP" required>
@@ -100,7 +109,7 @@
             </div>
 
             <p class="text-muted mt-4 mb-0"><i class="bi bi-key me-1"></i>
-                El sistema genera una contraseña inicial segura. Al registrar, podrás descargar las credenciales en PDF.</p>
+                El sistema genera una contraseña inicial segura. Al registrar, podrás descargar o enviar las credenciales.</p>
 
             <div class="mt-3 d-flex gap-2 justify-content-end">
                 <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary-custom">Cancelar</a>

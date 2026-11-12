@@ -1,22 +1,24 @@
-{# Sala en vivo con LiveKit (WebRTC) para docente y estudiante: audio, cámara, pantalla compartida y pantalla completa.
-   Requiere #sala con: data-token-url, data-fin-url, data-puede-compartir ("true"/"false"),
-   y solo para el estudiante: data-salir-url y data-csrf.
-   Verifica en npm que esta versión de livekit-client exista antes de desplegar. #}
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.9.1/dist/livekit-client.umd.min.js"></script>
 <script>
 (function () {
     var sala = document.getElementById('sala');
     if (!sala) { return; }
     var $ = function (id) { return document.getElementById(id); };
-    var MAX = 7;
+
+    var POR_PAGINA = 6;
+    var AUTO_SEGUIR_HABLANTE = true;
+    var COOLDOWN_NAV_MS = 4000;
+
     var estado = $('estadoAudio'), contador = $('contadorParticipantes'), grilla = $('grillaParticipantes');
     var panel = $('listaParticipantes'), tituloPanel = $('tituloParticipantes'), audios = $('audios');
     var pantalla = $('pantallaCompartida'), aviso = $('avisoSala');
     var btnMic = $('btnMic'), btnCamara = $('btnCamara'), btnPantalla = $('btnPantalla'), btnFull = $('btnFullscreen');
     var btnAudio = $('btnAudio'), badge = $('badgeParticipantes');
+    var pager = $('controlesPaginacion'), pagerInfo = $('infoPagina'), btnPrev = $('btnPrevPagina'), btnNext = $('btnNextPagina');
+
     var puedeCompartir = sala.dataset.puedeCompartir === 'true';
     var room = null, saliendo = false, tarjetas = {};
-    var mas = null;
+    var paginaActual = 0, ultimaNavManual = 0;
 
     function mostrarAviso(texto) { aviso.textContent = texto; aviso.classList.remove('d-none'); }
     function el(tag, clase, texto) {
@@ -32,7 +34,6 @@
         btn.classList.toggle('call-btn--on', estadoBtn === 'on');
     }
 
-    // --- Pantalla completa (Esc la cierra: lo hace el propio navegador)
     if (btnFull) {
         if (!document.documentElement.requestFullscreen) { btnFull.classList.add('d-none'); }
         btnFull.addEventListener('click', function () {
@@ -47,7 +48,6 @@
         });
     }
 
-    // --- Cronómetro de la clase (en el banner)
     var crono = $('cronometro'), inicio = crono ? Date.parse(crono.dataset.inicio) : NaN;
     function dos(n) { return String(n).padStart(2, '0'); }
     function tick() {
@@ -63,7 +63,6 @@
     }
     var LK = window.LivekitClient;
 
-    // --- Participantes
     function iniciales(nombre) {
         var t = nombre.trim().split(/\s+/);
         return ((t[0] || '')[0] || '').toUpperCase() + ((t[1] || '')[0] || '').toUpperCase();
@@ -89,7 +88,6 @@
         return f;
     }
 
-    // Cada persona tiene una tarjeta que se actualiza en su lugar (así el video no parpadea)
     function crearTarjeta() {
         var video = el('video', 'tile-video');
         video.autoplay = true; video.muted = true; video.playsInline = true;
@@ -138,36 +136,86 @@
             else { icono(btnPantalla, 'bi-display', 'Compartir pantalla', ''); }
         }
     }
+
+    function actualizarPaginador(totalPaginas, total) {
+        if (!pager) { return; }
+        pager.style.display = totalPaginas > 1 ? 'flex' : 'none';
+        if (pagerInfo) { pagerInfo.textContent = 'Página ' + (paginaActual + 1) + ' de ' + totalPaginas; }
+        if (btnPrev) { btnPrev.disabled = (paginaActual === 0); }
+        if (btnNext) { btnNext.disabled = (paginaActual === totalPaginas - 1); }
+        pager.setAttribute('aria-label', 'Página ' + (paginaActual + 1) + ' de ' + totalPaginas + ' · ' + total + ' participantes');
+    }
+
     function pintar() {
         if (!room) { return; }
-        var lista = todos(), visibles = lista.slice(0, MAX), presentes = {};
-        contador.textContent = lista.length + (lista.length === 1 ? ' participante' : ' participantes');
+
+        var lista = todos();
+        var total = lista.length;
+        var totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+        if (paginaActual >= totalPaginas) { paginaActual = totalPaginas - 1; }
+        if (paginaActual < 0) { paginaActual = 0; }
+
+        var inicio = paginaActual * POR_PAGINA;
+        var visibles = lista.slice(inicio, inicio + POR_PAGINA);
+
+        contador.textContent = total + (total === 1 ? ' participante' : ' participantes');
+
+        var presentes = {};
         visibles.forEach(function (p) { presentes[p.identity] = true; });
         Object.keys(tarjetas).forEach(function (id) { if (!presentes[id]) { quitarTarjeta(id); } });
+
         visibles.forEach(function (p) {
             var t = tarjetas[p.identity] || (tarjetas[p.identity] = crearTarjeta());
             actualizarTarjeta(p, t);
         });
-        // Solo se reordena si cambió el orden, para no reiniciar los videos
+
         var deseado = visibles.map(function (p) { return tarjetas[p.identity].raiz; });
-        var actual = Array.prototype.filter.call(grilla.children, function (n) { return n !== mas; });
+        var actual = Array.prototype.slice.call(grilla.children);
         var igual = deseado.length === actual.length && deseado.every(function (n, i) { return n === actual[i]; });
         if (!igual) {
+            actual.forEach(function (n) { if (deseado.indexOf(n) === -1) { n.remove(); } });
             deseado.forEach(function (n) { grilla.appendChild(n); });
             visibles.forEach(function (p) { var t = tarjetas[p.identity]; if (t.camara) { t.video.play().catch(function () {}); } });
         }
-        if (lista.length > MAX) {
-            mas = mas || el('article', 'participant-card participant-card--more');
-            mas.textContent = '+' + (lista.length - MAX) + ' participantes';
-            grilla.appendChild(mas);
-        } else if (mas) { mas.remove(); }
+
+        grilla.setAttribute('data-count', visibles.length);
+        actualizarPaginador(totalPaginas, total);
+
         if (panel) { panel.textContent = ''; lista.forEach(function (p) { panel.appendChild(fila(p)); }); }
-        if (tituloPanel) { tituloPanel.textContent = 'Participantes (' + lista.length + ')'; }
-        if (badge) { badge.textContent = lista.length; }
+        if (tituloPanel) { tituloPanel.textContent = 'Participantes (' + total + ')'; }
+        if (badge) { badge.textContent = total; }
         etiquetas();
     }
 
-    // --- Conexión
+    function irPagina(n) {
+        if (!room) { return; }
+        var totalPaginas = Math.max(1, Math.ceil(todos().length / POR_PAGINA));
+        if (n < 0) { n = 0; }
+        if (n >= totalPaginas) { n = totalPaginas - 1; }
+        paginaActual = n;
+        ultimaNavManual = Date.now();
+        pintar();
+    }
+
+    function seguirHablante() {
+        if (!AUTO_SEGUIR_HABLANTE) { return; }
+        if (Date.now() - ultimaNavManual < COOLDOWN_NAV_MS) { return; }
+        var lista = todos();
+        var inicio = paginaActual * POR_PAGINA;
+        var fin = inicio + POR_PAGINA;
+        for (var i = 0; i < lista.length; i++) {
+            var p = lista[i];
+            if (p === room.localParticipant) { continue; }
+            if (p.isSpeaking && (i < inicio || i >= fin)) {
+                paginaActual = Math.floor(i / POR_PAGINA);
+                return;
+            }
+        }
+    }
+
+    if (btnPrev) { btnPrev.addEventListener('click', function () { irPagina(paginaActual - 1); }); }
+    if (btnNext) { btnNext.addEventListener('click', function () { irPagina(paginaActual + 1); }); }
+
     fetch(sala.dataset.tokenUrl, { credentials: 'same-origin' })
         .then(function (r) {
             return r.json().catch(function () { return {}; }).then(function (d) {
@@ -177,9 +225,13 @@
         })
         .then(function (d) {
             room = new LK.Room({ adaptiveStream: true, dynacast: true });
-            ['ParticipantConnected', 'ParticipantDisconnected', 'TrackMuted', 'TrackUnmuted', 'ActiveSpeakersChanged',
+            ['ParticipantConnected', 'ParticipantDisconnected', 'TrackMuted', 'TrackUnmuted',
              'LocalTrackPublished', 'LocalTrackUnpublished', 'ParticipantMetadataChanged'].forEach(function (n) {
                 room.on(LK.RoomEvent[n], pintar);
+            });
+            room.on(LK.RoomEvent.ActiveSpeakersChanged, function () {
+                seguirHablante();
+                pintar();
             });
             room.on(LK.RoomEvent.TrackSubscribed, function (track) {
                 if (track.kind === LK.Track.Kind.Audio) { audios.appendChild(track.attach()); }
@@ -190,7 +242,7 @@
                 pintar();
             });
             room.on(LK.RoomEvent.TrackUnsubscribed, function (track) {
-                if (track.source === LK.Track.Source.Camera) { pintar(); return; }   // la tarjeta suelta su propio video
+                if (track.source === LK.Track.Source.Camera) { pintar(); return; }
                 track.detach().forEach(function (e) { e.remove(); });
                 if (track.source === LK.Track.Source.ScreenShare) { pantalla.classList.add('d-none'); pantalla.textContent = ''; }
                 pintar();
@@ -208,7 +260,6 @@
             [btnMic, btnCamara, btnPantalla].forEach(function (b) { if (b) { b.disabled = false; } });
             btnAudio.classList.toggle('d-none', room.canPlaybackAudio);
             pintar();
-            // El docente entra con el micrófono abierto; el estudiante entra silenciado. La cámara siempre empieza apagada.
             if (puedeCompartir) {
                 return room.localParticipant.setMicrophoneEnabled(true).catch(function () {
                     mostrarAviso('No se pudo usar el micrófono. Revisa los permisos del navegador.');
@@ -218,7 +269,6 @@
         .then(pintar)
         .catch(function (e) { estado.textContent = 'No se pudo conectar'; mostrarAviso(e.message || 'No se pudo entrar a la clase.'); });
 
-    // --- Controles
     btnAudio.addEventListener('click', function () { room.startAudio(); });
     if (btnMic) {
         btnMic.addEventListener('click', function () {
@@ -237,7 +287,7 @@
     if (btnPantalla) {
         btnPantalla.addEventListener('click', function () {
             var lp = room.localParticipant;
-            lp.setScreenShareEnabled(!lp.isScreenShareEnabled).then(pintar).catch(function () { /* canceló el selector */ });
+            lp.setScreenShareEnabled(!lp.isScreenShareEnabled).then(pintar).catch(function () {});
         });
     }
     window.addEventListener('pagehide', function () {

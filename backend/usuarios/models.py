@@ -41,6 +41,13 @@ class Usuario(models.Model):
         db_column='Correo'
     )
 
+    correo_personal = models.EmailField(
+        max_length=150,
+        unique=True,
+        null=True,
+        blank=True,
+        db_column='CorreoPersonal'
+    )
     password_hash = models.CharField(
         max_length=255,
         db_column='PasswordHash'

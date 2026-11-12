@@ -8,10 +8,12 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.urls import reverse  # <--- IMPORTANTE
 from notificaciones.models import Notificacion
 from notificaciones.services import notificar_paralelo
 from usuarios.contexto import contexto_curso, texto_error
 from usuarios.decorators import docente_requerido
+from usuarios.models import Usuario # <--- IMPORTANTE
 from .models import Actividad
 
 def _fecha_limite(texto):
@@ -67,25 +69,38 @@ def docente_actividades(request, curso_id):
             actividad.full_clean()  
             with transaction.atomic():
                 actividad.save()
+                
+                # 1. URL exacta para el estudiante
+                url_tarea = reverse('estudiante_academico') + f"?vista=tareas&actividad={actividad.id}"
+                
+                # 2. Notificar a estudiantes
                 n = notificar_paralelo(
-                    ctx["paralelo"], Notificacion.Tipo.ACTIVIDAD, f"Nueva actividad: {actividad.titulo}"
+                    ctx["paralelo"], Notificacion.Tipo.ACTIVIDAD, 
+                    f"Nueva actividad: {actividad.titulo}", url_destino=url_tarea
                 )
+                
+                # 3. Notificar al Administrador
+                admins = Usuario.objects.filter(rol__nombre='Administrador', estado=True)
+                for admin in admins:
+                    Notificacion.objects.create(
+                        usuario=admin, tipo=Notificacion.Tipo.AVISO,
+                        mensaje=f"El docente {request.docente.usuario.nombres} publicó: {actividad.titulo}",
+                        url_destino=reverse('admin_dashboard')
+                    )
+                    
         except ValidationError as e:
             error = texto_error(e)
         else:
             messages.success(request, f"Actividad publicada. Se notificó a {n} estudiantes.")
             
-            # REDIRECCIÓN AL EDITOR: Solo si es cuestionario/ordenar y usa IA
             if actividad.tipo in ('cuestionario', 'ordenar') and actividad.usa_ia:
                 return redirect("docente_cuestionario_crear", curso_id=curso_id, pk=actividad.pk)
                 
             return redirect("docente_actividades", curso_id=curso_id)
     return _render_lista(request, ctx, error)
 
-
 @docente_requerido
 def docente_cuestionario_crear(request, curso_id, pk):
-    """Editor visual SOLO para las preguntas y respuestas del cuestionario."""
     ctx = contexto_curso(request, curso_id)
     actividad = _actividad_del_docente(request, curso_id, pk)
     error = None
@@ -94,7 +109,7 @@ def docente_cuestionario_crear(request, curso_id, pk):
         try:
             bruto = request.POST.get('cuestionario')
             from asistente_ia.cuestionario import parsear_y_validar, CuestionarioInvalido
-            parsear_y_validar(bruto, usa_ia=actividad.usa_ia) # Validar antes de guardar
+            parsear_y_validar(bruto, usa_ia=actividad.usa_ia)
             actividad.cuestionario = bruto
             actividad.save()
         except CuestionarioInvalido as e:
@@ -107,7 +122,6 @@ def docente_cuestionario_crear(request, curso_id, pk):
             
     ctx.update(actividad=actividad, error=error)
     return render(request, "docente/cuestionario_crear.html", ctx)
-
 
 @docente_requerido
 def docente_actividad_editar(request, curso_id, pk):
@@ -137,7 +151,6 @@ def docente_actividad_eliminar(request, curso_id, pk):
     actividad = _actividad_del_docente(request, curso_id, pk)
     if actividad.esta_vencida():
         return _render_lista(request, ctx, "La actividad ya venció y no se puede eliminar.")
-
     if actividad.entregas.exists():
         return _render_lista(request, ctx, "La actividad ya tiene entregas, no se puede eliminar.")
     actividad.delete()

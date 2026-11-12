@@ -1,0 +1,40 @@
+{% extends 'docente/curso_base.html' %}
+{% block title %}Resumen - {{ curso.idioma.nombre }} {{ curso.nivel.codigo }} - Da Vinci{% endblock %}
+{% block docente_nav %}{% include 'components/docente_nav.html' with active_rail='equipos' nav_url_name='docente_curso_resumen' %}{% endblock %}
+{% block subtitulo %}Resumen general del curso{% endblock %}
+{% block tabs %}{% include 'components/curso_tabs.html' with tab_activa='resumen' %}{% endblock %}
+
+{% block curso_contenido %}
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stat-label">Estudiantes</div>
+            <div class="stat-number">{{ total_estudiantes }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stat-label">Promedio General</div>
+            <div class="stat-number">{{ promedio_general }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stat-label">Entregas</div>
+            <div class="stat-number">{{ entregas_totales }} <span class="fs-6 text-muted">/ {{ entregas_esperadas }}</span></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stat-label">Asistencia Promedio</div>
+            <div class="stat-number">{{ asistencia_promedio }}%</div>
+        </div>
+    </div>
+</div>
+
+<div class="panel-card text-center py-5">
+    <i class="bi bi-graph-up display-4 text-muted mb-3"></i>
+    <h4 class="fw-bold">Bienvenido al resumen del curso</h4>
+    <p class="text-muted mb-0">Desde aquí puedes monitorear el rendimiento general. Utiliza las pestañas superiores para navegar a Tareas, Asistencia o Progreso.</p>
+</div>
+{% endblock %}

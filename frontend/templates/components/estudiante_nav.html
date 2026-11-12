@@ -7,7 +7,7 @@
         </li>
         <li>
             <a class="rail-link {% if active_rail == 'chat' %}active{% endif %}" href="{% url 'estudiante_mensajes' %}">
-                <i class="bi bi-chat-square"></i><span>Chat</span>
+                <i class="bi bi-chat-square"></i><span>Chat</span>{% if chat_no_leidos %}<span class="rail-badge" aria-label="{{ chat_no_leidos }} sin leer">{{ chat_no_leidos_texto }}</span>{% endif %}
             </a>
         </li>
         <li>
@@ -53,7 +53,6 @@
         {% endif %}
     </aside>
 
-    <!-- BOTÓN FLOTANTE (fuera del subpanel para que no desaparezca al colapsar) -->
     <button class="btn-toggle-sidebar" id="toggleSidebar" type="button" title="Colapsar menú" aria-label="Colapsar menú" aria-controls="sidebar" aria-expanded="true">
         <i class="bi bi-chevron-double-left"></i>
     </button>
