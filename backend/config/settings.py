@@ -95,7 +95,7 @@ DATABASES = {
         'HOST': os.getenv('DB_HOST'),
         'PORT': os.getenv('DB_PORT', '5432'),
         'OPTIONS': {
-            'sslmode': 'require',
+            'sslmode': 'prefer',
             'connect_timeout': 10,
         },
         'CONN_MAX_AGE': 60,
@@ -156,7 +156,7 @@ ASGI_APPLICATION = 'config.asgi.application'
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 ASISTENTE_IA_MAX_INTENTOS = 3
-ASISTENTE_IA_GUARDAR = False   # ver punto 6
+ASISTENTE_IA_GUARDAR = True
 
 # Configuración de Google Apps Script 
 GOOGLE_SCRIPT_URL = os.getenv('GOOGLE_SCRIPT_URL', '')

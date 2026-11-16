@@ -66,7 +66,15 @@ async function iniciar(){
     <td><strong>${esc(x.titulo)}</strong><br><small class="text-muted">${esc(x.curso_nombre)} · ${esc(x.paralelo_codigo)}</small></td>
     <td>${x.fecha_limite?new Date(x.fecha_limite).toLocaleString():'Sin fecha'}</td>
     <td>${esc(x.estado_estudiante)}</td>
-    <td>${['cuestionario','ordenar'].includes(String(x.tipo||'').toLowerCase())?`<a class="quiz-launch-btn" href="/estudiante/cuestionario/${Number(x.id_actividad)}/"><i class="bi bi-play-circle"></i> Entrar a la actividad</a>`:x.estado_estudiante==='PENDIENTE'?`<form class="entrega" data-id="${Number(x.id_actividad)}"><textarea class="form-control mb-1" name="contenido_texto" placeholder="Tu respuesta"></textarea><input class="form-control form-control-sm mb-1" type="file" name="archivo"><button class="btn btn-sm btn-primary-custom">Entregar</button></form>`:x.es_tardia?'Entrega tardía':x.id_entrega?'Entregada':'—'}</td>
+    <td>
+        ${['cuestionario','ordenar'].includes(String(x.tipo||'').toLowerCase()) 
+            ? (x.estado_estudiante === 'ENTREGADA' 
+                ? `<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Entregado</span>`
+                : `<a class="quiz-launch-btn" href="/estudiante/cuestionario/${Number(x.id_actividad)}/"><i class="bi bi-play-circle"></i> Entrar a la actividad</a>`)
+            : (x.estado_estudiante === 'PENDIENTE' 
+                ? `<form class="entrega" data-id="${Number(x.id_actividad)}"><textarea class="form-control mb-1" name="contenido_texto" placeholder="Tu respuesta"></textarea><input class="form-control form-control-sm mb-1" type="file" name="archivo"><button class="btn btn-sm btn-primary-custom">Entregar</button></form>`
+                : x.es_tardia ? 'Entrega tardía' : x.id_entrega ? 'Entregado' : '—')}
+    </td>
     <td>${x.calificacion==null?'Pendiente':esc(x.calificacion)+' / '+esc(x.puntaje_maximo)}</td>
     <td>${esc(x.observaciones)}</td>
    </tr>`).join('')||'<tr><td colspan="6" class="text-center text-muted py-4">No tienes tareas para mostrar.</td></tr>';

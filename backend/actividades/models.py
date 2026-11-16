@@ -125,3 +125,27 @@ class Entrega(models.Model):
 
     def __str__(self):
         return f"{self.actividad_id} / {self.estudiante_id}"
+
+
+class RetroalimentacionIA(models.Model):
+    id = models.AutoField(primary_key=True)
+    entrega = models.ForeignKey(
+        Entrega, on_delete=models.CASCADE, 
+        related_name='retroalimentaciones'
+    )
+    numero_pregunta = models.IntegerField()
+    modelo_ia = models.CharField(max_length=100, help_text="Ej: openai/gpt-oss-120b")
+    texto_original = models.TextField()
+    veredicto = models.CharField(max_length=50, help_text="correcto, variante_valida, error")
+    tipo_error = models.CharField(max_length=100, blank=True, null=True)
+    correccion = models.TextField(blank=True, null=True)
+    explicacion = models.TextField(blank=True, null=True)
+    ejercicios_sugeridos = models.TextField(blank=True, null=True, help_text="Separados por saltos de línea")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "retroalimentacion_ia"
+        ordering = ["numero_pregunta"]
+
+    def __str__(self):
+        return f"Entrega {self.entrega_id} - Pregunta {self.numero_pregunta}"

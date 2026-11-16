@@ -99,8 +99,20 @@ def _resolver(request, actividad, estudiante, numero, pregunta, respuesta, curso
         respuesta=respuesta,
         consultar_ia=consultar_ia,
     )
+    
     if resultado["origen"] == "ia":
         persistencia.registrar_intento(request, actividad, numero)
+        
+        if persistencia.habilitada():
+            persistencia.guardar(
+                actividad=actividad,
+                estudiante=estudiante,
+                numero=numero,
+                respuesta=respuesta,
+                resultado=resultado,
+                modelo=cliente_groq.modelo_configurado()
+            )
+        
     return resultado
 
 @require_POST

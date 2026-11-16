@@ -336,26 +336,42 @@ def actividades_estudiante(estudiante, paralelo_id=None):
         resultado.append((actividad, entrega, estado))
     return resultado
 
+
 @transaction.atomic
 def entregar_actividad(estudiante, actividad_id, contenido_texto='', archivo=None):
     actividad = get_object_or_404(Actividad.objects.select_for_update(), pk=actividad_id, estado='ACTIVA')
+    
     if not _inscripciones_estudiante(estudiante).filter(paralelo=actividad.paralelo).exists():
         from rest_framework.exceptions import PermissionDenied
         raise PermissionDenied('No estás inscrito en el paralelo de esta actividad.')
-    if Entrega.objects.filter(actividad=actividad, estudiante=estudiante).exists():
-        raise ValidationError('Esta actividad ya tiene una entrega registrada y no admite una segunda entrega.')
+        
     tardia = bool(actividad.fecha_limite and timezone.now() > actividad.fecha_limite)
     if tardia and not actividad.permite_entrega_tardia:
         raise ValidationError('El plazo de entrega venció y esta actividad no permite entregas tardías.')
+        
+    entrega_existente = Entrega.objects.filter(actividad=actividad, estudiante=estudiante).first()
+    
+    if entrega_existente:
+        # Si ya está ENTREGADA, no se permite otra
+        if entrega_existente.estado == 'ENTREGADA':
+            raise ValidationError('Esta actividad ya tiene una entrega registrada y no admite una segunda entrega.')
+            
+        # Si está en BORRADOR, la actualizamos con el contenido final
+        entrega_existente.contenido_texto = contenido_texto
+        if archivo:
+            entrega_existente.archivo = archivo
+        entrega_existente.es_tardia = tardia
+        entrega_existente.estado = 'ENTREGADA'
+        entrega_existente.save()
+        return entrega_existente
+        
+    # Si no existe, creamos una nueva
     return Entrega.objects.create(
         actividad=actividad, estudiante=estudiante, contenido_texto=contenido_texto,
         archivo=archivo, es_tardia=tardia, estado='ENTREGADA',
     )
 
 
-# ==========================================
-# NUEVA FÓRMULA DE PROMEDIO PONDERADO
-# ==========================================
 def calcular_promedio_ponderado(estudiante, paralelo):
     """
     Calcula la nota final ponderada:

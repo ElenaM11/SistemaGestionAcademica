@@ -130,10 +130,15 @@ class TestComunicacionLogica(SimpleTestCase):
         self.assertEqual(token, "jwt_falso")
 
     @patch('comunicacion.permisos.Docente.objects.filter')
+    @patch('comunicacion.permisos.Usuario.objects.filter')
     @patch('comunicacion.permisos.Estudiante.objects.filter')
-    def test_pueden_conversar(self, mock_est, mock_doc):
+    def test_pueden_conversar(self, mock_est, mock_user, mock_doc): 
+ 
+
+        mock_user.return_value.exists.return_value = False # Simulamos que no son administradores
         mock_doc.return_value.values_list.return_value = [1]
         mock_est.return_value.values_list.return_value = [2]
+        
         self.assertTrue(pueden_conversar(1, 2))
         
-        self.assertFalse(pueden_conversar(1, 1)) # Mismo usuario
+        self.assertFalse(pueden_conversar(1, 1))
