@@ -1,9 +1,7 @@
 # Sistema de Gestión Académica - Instituto Da Vinci
 
 
-![Tests](https://github.com/ElenaM11/SistemaGestionAcademica/actions/workflows/tests.yml/badge.svg)
-
-
+![Pruebas Da Vinci](https://github.com/ElenaM11/SistemaGestionAcademica/actions/workflows/tests.yml/badge.svg?branch=sprint-5)
 
 Sistema web de gestión académica desarrollado para el Instituto Da Vinci Educativo.
 
