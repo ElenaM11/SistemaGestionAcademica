@@ -17,6 +17,8 @@ from .models import (
     Curso, DocenteIdioma, EstudianteParalelo, HorarioParalelo, Idioma,
     Nivel, Paralelo, Programa, Turno,
 )
+from datetime import timedelta
+from datetime import date, timedelta
 
 def _prefijo_codigo(texto):
     normalizado = unicodedata.normalize('NFKD', texto or '').encode('ascii', 'ignore').decode('ascii')
