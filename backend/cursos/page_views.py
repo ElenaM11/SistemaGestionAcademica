@@ -18,7 +18,7 @@ from .serializers import CursoSerializer, ParaleloActualizarSerializer, Paralelo
 from .services import (
     asignar_docente, actualizar_paralelo, crear_elemento_catalogo, crear_o_actualizar_curso,
     crear_paralelo, docente_disponible_para_horarios, inscribir_estudiante, listar_paralelos_disponibles,
-    habilitar_idioma_docente, retirar_inscripcion,
+    habilitar_idioma_docente, retirar_inscripcion, _prefijo_codigo,
 )
 
 from asistente_ia.cuestionario import preguntas_publicas
@@ -220,7 +220,6 @@ def catalogo_cursos_pagina(request):
 
 
 def catalogos_pagina(request):
-    """Muestro y completo los catálogos académicos que alimentan cursos y paralelos."""
     usuario, respuesta = validar_rol_pagina(request, 'Administrador')
     if respuesta:
         return respuesta
@@ -234,12 +233,18 @@ def catalogos_pagina(request):
                 )
                 messages.success(request, 'Idioma habilitado para el docente.' if creada else 'El docente ya tenía habilitado ese idioma.')
                 return redirect('admin_catalogos')
+                
             if tipo == 'idioma':
-                datos = {'nombre': request.POST.get('nombre', '').strip(), 'codigo': request.POST.get('codigo', '').strip()}
-                if not datos['nombre'] or not datos['codigo']:
-                    raise ValidationError('El nombre y el código del idioma son obligatorios.')
+                nombre = request.POST.get('nombre', '').strip()
+                if not nombre:
+                    raise ValidationError('El nombre del idioma es obligatorio.')
+                
+                # EL CÓDIGO SE GENERA AUTOMÁTICAMENTE (Inglés -> ING)
+                codigo = _prefijo_codigo(nombre)
+                datos = {'nombre': nombre, 'codigo': codigo}
+                
             elif tipo == 'nivel':
-                datos = {'codigo': request.POST.get('codigo', '').strip()}
+                datos = {'codigo': request.POST.get('codigo', '').strip().upper()}
                 if not datos['codigo']:
                     raise ValidationError('El código del nivel es obligatorio.')
             elif tipo == 'programa':
@@ -269,6 +274,7 @@ def catalogos_pagina(request):
                     raise ValidationError('La hora inicial del turno debe ser anterior a la hora final.')
             else:
                 raise ValidationError('Selecciona un catálogo válido.')
+                
             crear_elemento_catalogo(tipo, datos)
             messages.success(request, 'El elemento del catálogo se agregó correctamente.')
             return redirect('admin_catalogos')
@@ -277,6 +283,7 @@ def catalogos_pagina(request):
                 messages.error(request, 'Ese idioma, nivel o turno ya existe en el catálogo.')
             else:
                 registrar_error_pagina(request, error)
+                
     return render(request, 'admin_panel/catalogos.html', {
         'usuario': usuario,
         'idiomas': Idioma.objects.order_by('nombre'),

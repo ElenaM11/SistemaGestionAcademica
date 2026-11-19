@@ -582,25 +582,47 @@ def perfil(request):
 
     rol = u.rol.nombre.lower()
     extra = []
+    sidebar_ctx = {}
 
     if rol == 'estudiante':
         est = Estudiante.objects.filter(usuario=u).first()
         if est:
             extra = [('Código de estudiante', est.codigo_estudiante)]
+            
+            # CORRECCIÓN: Buscamos por el objeto 'est', no por 'u'
+            from cursos.models import EstudianteParalelo
+            sidebar_ctx['inscripciones'] = list(
+                EstudianteParalelo.objects.filter(estudiante=est, estado='ACTIVO')
+                .select_related('paralelo__curso__idioma', 'paralelo__curso__nivel', 'paralelo__turno')
+            )
+            
     elif rol == 'docente':
         doc = Docente.objects.filter(usuario=u).first()
         if doc:
             extra = [('Especialidad', doc.especialidad)]
+            
+            # CORRECCIÓN: Buscamos por el objeto 'doc', no por 'u'
+            from cursos.models import Paralelo
+            sidebar_ctx['paralelos'] = list(
+                Paralelo.objects.filter(docente=doc, estado='ACTIVO')
+                .select_related('curso__idioma', 'curso__nivel', 'turno')
+            )
 
-    return render(request, 'accounts/perfil.html', {
+    context = {
         'es_admin': rol == 'administrador',
         'sidebar_template': SIDEBARS.get(rol),
         'nombre_completo': f'{u.nombres} {u.ap_pat} {u.ap_mat}'.strip(),
         'correo': u.correo,
         'rol_nombre': u.rol.nombre,
-        'iniciales': (u.nombres[:1] + u.ap_pat[:1]).upper(),
+        'iniciales': (u.nombres[:1] + (u.ap_pat or '')[:1]).upper(),
         'extra': extra,
-    })
+        'active_rail': '', 
+        'nav_url_name': 'perfil' 
+    }
+    
+    context.update(sidebar_ctx)
+
+    return render(request, 'accounts/perfil.html', context)
 
 
 def generar_correo_docente(nombres, ap_pat, ap_mat):
@@ -687,3 +709,27 @@ def admin_enviar_aviso(request):
         return redirect('admin_dashboard')
         
     return render(request, 'admin_panel/enviar_aviso.html')
+
+@require_GET
+def api_generar_credenciales(request):
+    """Genera el correo (y código si es estudiante) en tiempo real."""
+    if request.session.get('usuario_rol', '').lower() != 'administrador':
+        return JsonResponse({'error': 'forbidden'}, status=403)
+        
+    nombres = request.GET.get('nombres', '')
+    ap_pat = request.GET.get('ap_pat', '')
+    ap_mat = request.GET.get('ap_mat', '')
+    rol = request.GET.get('rol', '').lower()
+
+    if rol == 'estudiante':
+        codigo = generar_codigo_estudiante(nombres, ap_pat, ap_mat)
+        correo = correo_desde_codigo(codigo)
+        return JsonResponse({'codigo': codigo, 'correo': correo})
+    elif rol == 'docente':
+        correo = generar_correo_docente(nombres, ap_pat, ap_mat)
+        return JsonResponse({'correo': correo})
+    elif rol == 'administrador':
+        correo = generar_correo_admin(nombres, ap_pat, ap_mat)
+        return JsonResponse({'correo': correo})
+
+    return JsonResponse({'correo': ''})

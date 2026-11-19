@@ -371,15 +371,7 @@ def entregar_actividad(estudiante, actividad_id, contenido_texto='', archivo=Non
         archivo=archivo, es_tardia=tardia, estado='ENTREGADA',
     )
 
-
 def calcular_promedio_ponderado(estudiante, paralelo):
-    """
-    Calcula la nota final ponderada:
-    - 50% Tareas (escrita, oral)
-    - 40% Exámenes (cuestionario, ordenar)
-    - 10% Asistencia
-    Si una categoría no tiene datos, su peso se redistribuye.
-    """
     entregas = Entrega.objects.filter(
         estudiante=estudiante, 
         actividad__paralelo=paralelo, 
@@ -393,7 +385,7 @@ def calcular_promedio_ponderado(estudiante, paralelo):
         maximo = float(e.actividad.puntaje_maximo or 100)
         nota_100 = (float(e.calificacion) / maximo) * 100
         
-        # Clasificamos según el tipo de actividad
+        # Clasificamos según el tipo
         if e.actividad.tipo in ['cuestionario', 'ordenar']:
             notas_examenes.append(nota_100)
         else:
@@ -402,10 +394,21 @@ def calcular_promedio_ponderado(estudiante, paralelo):
     prom_tareas = sum(notas_tareas) / len(notas_tareas) if notas_tareas else None
     prom_examenes = sum(notas_examenes) / len(notas_examenes) if notas_examenes else None
 
-    # Calculamos la asistencia usando tu servicio existente
-    _, dict_asistencia = resumen_asistencia(paralelo, [estudiante.pk])
-    asistencia_pct = dict_asistencia.get(estudiante.pk, {}).get('pct')
+    total_clases_esperadas = calcular_clases_totales(paralelo)
+    
+    asistencias = Asistencia.objects.filter(estudiante=estudiante, sesion__paralelo=paralelo)
+    
+    if total_clases_esperadas and total_clases_esperadas > 0:
+        # Si tenemos las fechas, calculamos sobre el total proyectado
+        asistencias_validas = asistencias.filter(estado__in=['presente', 'tardanza']).count()
+        asistencia_pct = (asistencias_validas / total_clases_esperadas) * 100
+    else:
+        # Si no hay fechas, calculamos sobre las sesiones que ya se registraron
+        total_registradas = asistencias.count()
+        asistencias_validas = asistencias.filter(estado__in=['presente', 'tardanza']).count()
+        asistencia_pct = (asistencias_validas / total_registradas) * 100 if total_registradas > 0 else None
 
+    # --- CÁLCULO DE PONDERACIÓN ---
     pesos = []
     notas = []
     
@@ -417,12 +420,12 @@ def calcular_promedio_ponderado(estudiante, paralelo):
         notas.append(prom_examenes)
     if asistencia_pct is not None:
         pesos.append(0.10)
-        notas.append(float(asistencia_pct))
+        notas.append(asistencia_pct)
 
     if not notas:
-        return None  # No hay datos suficientes para calcular un promedio
+        return None  
 
-    # Redistribución proporcional si falta alguna categoría
+    # Redistribución (Si no hay exámenes todavía, se reparte el 40% entre tareas y asistencia)
     suma_pesos = sum(pesos)
     nota_final = sum(n * (p / suma_pesos) for n, p in zip(notas, pesos))
     
@@ -433,21 +436,22 @@ def resumen_progreso(estudiante, paralelo):
     entregas = Entrega.objects.filter(estudiante=estudiante, actividad__paralelo=paralelo)
     calificadas = entregas.filter(calificacion__isnull=False)
     
-    asistencias = Asistencia.objects.filter(estudiante=estudiante, sesion__paralelo=paralelo)
-    total_asistencia = asistencias.count()
-    presentes = asistencias.filter(estado__in=['PRESENTE', 'TARDANZA']).count()
+    # Llamamos a la nueva lógica de asistencia
+    total_clases = calcular_clases_totales(paralelo) or SesionClase.objects.filter(paralelo=paralelo).count()
+    presentes = Asistencia.objects.filter(estudiante=estudiante, sesion__paralelo=paralelo, estado__in=['presente', 'tardanza']).count()
+    ausentes = Asistencia.objects.filter(estudiante=estudiante, sesion__paralelo=paralelo, estado='ausente').count()
     
-    # Usamos la nueva función de promedio ponderado
     promedio_ponderado = calcular_promedio_ponderado(estudiante, paralelo)
 
     return {
         'id_paralelo': paralelo.pk, 'codigo_paralelo': paralelo.codigo, 'curso': paralelo.curso.nombre,
-        'promedio': promedio_ponderado, # <-- AHORA DEVUELVE LA NOTA FINAL
+        'promedio': promedio_ponderado, 
         'actividades_entregadas': entregas.count(),
         'actividades_totales': Actividad.objects.filter(paralelo=paralelo, estado='ACTIVA').count(),
         'actividades_calificadas': calificadas.count(),
-        'asistencias_presentes': presentes, 'asistencias_ausentes': asistencias.filter(estado='AUSENTE').count(),
-        'asistencia_porcentaje': round(presentes * 100 / total_asistencia, 2) if total_asistencia else None,
+        'asistencias_presentes': presentes, 
+        'asistencias_ausentes': ausentes,
+        'asistencia_porcentaje': round((presentes / total_clases) * 100, 2) if total_clases > 0 else None,
     }
     
 def progreso_estudiantes_docente(docente, paralelo_id=None):
@@ -528,3 +532,26 @@ def buscar_estudiantes_resumen(busqueda, curso_id=None):
                 'asistencia_porcentaje': round(presentes * 100 / total_asistencia, 2) if total_asistencia else None,
             })
     return resultados
+
+def calcular_clases_totales(paralelo):
+    """Calcula cuántas clases debería haber en total (L-V o Sábados)."""
+    if not paralelo.fecha_inicio or not paralelo.fecha_fin:
+        return None
+    
+    dias_clase = [h.dia_semana.lower() for h in paralelo.horarios.all()]
+    if not dias_clase:
+        return None
+
+    dias_semana_map = {
+        'lunes': 0, 'martes': 1, 'miercoles': 2, 'miércoles': 2,
+        'jueves': 3, 'viernes': 4, 'sabado': 5, 'sábado': 5, 'domingo': 6
+    }
+    dias_numeros = [dias_semana_map[d] for d in dias_clase if d in dias_semana_map]
+    
+    total = 0
+    fecha_actual = paralelo.fecha_inicio
+    while fecha_actual <= paralelo.fecha_fin:
+        if fecha_actual.weekday() in dias_numeros:
+            total += 1
+        fecha_actual += timedelta(days=1)
+    return total

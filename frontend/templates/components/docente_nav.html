@@ -1,32 +1,23 @@
 <div class="app-nav" id="sidebar">
-    {% with c=curso.id_curso|default:paralelos.0.curso_id %}
-    <ul class="rail">
-        <li>
-            <a class="rail-link {% if active_rail == 'actividad' %}active{% endif %}" href="{% url 'notificaciones' %}">
-                <i class="bi bi-bell"></i><span>Actividad</span>{% if notif_no_leidas %}<span class="rail-badge" aria-label="{{ notif_no_leidas }} sin leer">{{ notif_no_leidas_texto }}</span>{% endif %}
-            </a>
-        </li>
-        <li>
-            <a class="rail-link {% if active_rail == 'chat' %}active{% endif %}" href="{% if c %}{% url 'docente_mensajes' c %}{% else %}{% url 'docente_dashboard' %}{% endif %}">
-                <i class="bi bi-chat-square"></i><span>Chat</span>{% if chat_no_leidos %}<span class="rail-badge" aria-label="{{ chat_no_leidos }} sin leer">{{ chat_no_leidos_texto }}</span>{% endif %}
-            </a>
-        </li>
-        <li>
-            <a class="rail-link {% if active_rail == 'equipos' %}active{% endif %}" href="{% if c %}{% url 'docente_estudiantes_curso' c %}{% else %}{% url 'docente_dashboard' %}{% endif %}">
-                <i class="bi bi-people"></i><span>Equipos</span>
-            </a>
-        </li>
-        <li>
-            <a class="rail-link {% if active_rail == 'tareas' %}active{% endif %}" href="{% if c %}{% url 'docente_actividades' c %}{% else %}{% url 'docente_dashboard' %}{% endif %}">
-                <i class="bi bi-check2-square"></i><span>Tareas</span>
-            </a>
-        </li>
-        <li>
-            <a class="rail-link {% if active_rail == 'llamadas' %}active{% endif %}" href="{% if c %}{% url 'docente_clase_iniciar' c %}{% else %}{% url 'docente_dashboard' %}{% endif %}">
-                <i class="bi bi-telephone"></i><span>Llamadas</span>
-            </a>
-        </li>
-    </ul>
+
+    {% with primer_paralelo=paralelos|first %}
+
+    {% if curso %}
+        {% with c=curso.id_curso %}
+            {% include 'components/docente_nav_links.html' %}
+        {% endwith %}
+
+    {% elif primer_paralelo %}
+        {% with c=primer_paralelo.curso_id %}
+            {% include 'components/docente_nav_links.html' %}
+        {% endwith %}
+
+    {% else %}
+        {% with c=None %}
+            {% include 'components/docente_nav_links.html' %}
+        {% endwith %}
+    {% endif %}
+
     {% endwith %}
 
     <aside class="subpanel course-subnav" aria-label="Mis cursos">
@@ -35,25 +26,44 @@
         </div>
 
         {% with destino=nav_url_name|default:'docente_estudiantes_curso' %}
+
         {% for grupo in paralelos %}
             {% if grupo.pk == paralelo.pk or paralelo_id|stringformat:'s' == grupo.pk|stringformat:'s' %}
-            <a class="sub-item active" href="{% url destino grupo.curso_id %}?paralelo={{ grupo.pk }}" aria-current="page" title="{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}">
-                <span class="chip c-orange">{{ grupo.curso.nivel.codigo }}</span>
-                <span class="sub-text">{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}</span>
-            </a>
+                <a class="sub-item active"
+                   href="{% url destino grupo.curso_id %}?paralelo={{ grupo.pk }}"
+                   aria-current="page">
+                    <span class="chip c-orange">{{ grupo.curso.nivel.codigo }}</span>
+                    <span class="sub-text">
+                        {{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}
+                    </span>
+                </a>
             {% else %}
-            <a class="sub-item" href="{% url destino grupo.curso_id %}?paralelo={{ grupo.pk }}" title="{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}">
-                <span class="chip c-orange">{{ grupo.curso.nivel.codigo }}</span>
-                <span class="sub-text">{{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}</span>
-            </a>
+                <a class="sub-item"
+                   href="{% url destino grupo.curso_id %}?paralelo={{ grupo.pk }}">
+                    <span class="chip c-orange">{{ grupo.curso.nivel.codigo }}</span>
+                    <span class="sub-text">
+                        {{ grupo.curso.idioma.nombre }} {{ grupo.curso.nivel.codigo }} · {{ grupo.turno.nombre }}
+                    </span>
+                </a>
             {% endif %}
+        {% empty %}
+            <p class="px-3 text-muted small">
+                Aún no tienes cursos asignados.
+            </p>
         {% endfor %}
+
         {% endwith %}
     </aside>
 
-    <button class="btn-toggle-sidebar" id="toggleSidebar" type="button" title="Colapsar menú" aria-label="Colapsar menú" aria-controls="sidebar" aria-expanded="true">
+    <button class="btn-toggle-sidebar" id="toggleSidebar"
+            type="button" title="Colapsar menú"
+            aria-label="Colapsar menú" aria-controls="sidebar"
+            aria-expanded="true">
         <i class="bi bi-chevron-double-left"></i>
     </button>
+
 </div>
+
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
 {% include 'components/sidebar_collapse.html' %}

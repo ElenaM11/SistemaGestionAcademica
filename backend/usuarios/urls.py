@@ -18,4 +18,5 @@ urlpatterns = [
     path('api/correo-docente/', views.api_correo_docente, name='api_correo_docente'),
     path('panel/credenciales/enviar/', views.admin_enviar_credenciales, name='admin_enviar_credenciales'),
     path('panel/avisos/enviar/', views.admin_enviar_aviso, name='admin_enviar_aviso'),
+    path('panel/api/generar-credenciales/', views.api_generar_credenciales, name='api_generar_credenciales'),
 ]

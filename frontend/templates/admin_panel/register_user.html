@@ -122,10 +122,9 @@
 
 {% block extra_js %}
 <script>
-    const API_CODIGO = "{% url 'api_codigo_estudiante' %}";
+    const API_GENERAR = "{% url 'api_generar_credenciales' %}";
     const $ = id => document.getElementById(id);
     const campos = ['nombres', 'ap_pat', 'ap_mat'];
-    let correoManual = $('correo').value;
     let timer;
 
     const rolActual = () => document.querySelector('.role-btn.active').dataset.roleName;
@@ -143,26 +142,37 @@
         });
     }
 
-    // Correo y código: solo se generan para estudiantes
+    // Correo: ahora se genera para TODOS los roles
     function modoCorreo() {
-        const est = esEstudiante();
-        $('correo').readOnly = est;
-        $('correoHint').classList.toggle('d-none', !est);
-        if (est) { refrescarGenerados(); }
-        else { $('correo').value = correoManual; $('codigo_estudiante').value = ''; }
+        $('correo').readOnly = true; // Siempre de solo lectura
+        $('correoHint').classList.remove('d-none'); // Siempre mostramos el aviso
+        $('correoHint').textContent = "Se genera automáticamente según el nombre y el rol.";
+        refrescarGenerados();
     }
 
     function refrescarGenerados() {
-        if (!esEstudiante()) return;
         clearTimeout(timer);
         timer = setTimeout(async () => {
-            const p = new URLSearchParams(Object.fromEntries(campos.map(c => [c, $(c).value])));
+            const p = new URLSearchParams({
+                nombres: $('nombres').value,
+                ap_pat: $('ap_pat').value,
+                ap_mat: $('ap_mat').value,
+                rol: rolActual()
+            });
+            
             try {
-                const r = await fetch(API_CODIGO + '?' + p);
+                const r = await fetch(API_GENERAR + '?' + p);
                 if (!r.ok) return;
                 const d = await r.json();
-                $('codigo_estudiante').value = d.codigo;
-                $('correo').value = d.correo;
+                
+                // Si es estudiante, actualizamos el código
+                if (d.codigo !== undefined) {
+                    $('codigo_estudiante').value = d.codigo;
+                }
+                // Para todos, actualizamos el correo
+                if (d.correo !== undefined) {
+                    $('correo').value = d.correo;
+                }
             } catch (e) { /* sin conexión: el servidor lo genera igual al guardar */ }
         }, 250);
     }
@@ -175,8 +185,8 @@
         modoCorreo();
     }
 
+    // Escuchar los cambios en el nombre y apellidos para refrescar
     campos.forEach(c => $(c).addEventListener('input', refrescarGenerados));
-    $('correo').addEventListener('input', () => { if (!esEstudiante()) correoManual = $('correo').value; });
 
     updateExtraFields(rolActual());
     modoCorreo();

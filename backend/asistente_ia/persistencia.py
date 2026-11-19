@@ -1,14 +1,4 @@
-"""Intentos por pregunta y guardado en RETROALIMENTACION_IA.
 
-MODO POR DEFECTO (ASISTENTE_IA_GUARDAR = False):
-    Los intentos se cuentan en la sesión del navegador y no se escribe nada en la base de datos.
-    Sirve para probar el flujo completo sin afectar las listas de entregas.
-
-MODO BASE DE DATOS (ASISTENTE_IA_GUARDAR = True):
-    Cada consulta a la IA crea una fila en RETROALIMENTACION_IA, enlazada a una ENTREGA en estado
-    BORRADOR. Requiere que los modelos de abajo existan con esos nombres de campo.
-    >>> AJUSTAR _modelos() y los nombres de campo si en tu proyecto son distintos. <<<
-"""
 import logging
 
 logger = logging.getLogger(__name__)

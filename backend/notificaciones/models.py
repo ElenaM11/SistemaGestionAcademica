@@ -21,7 +21,6 @@ class Notificacion(models.Model):
     leida = models.BooleanField(default=False)
     fecha = models.DateTimeField(default=timezone.now)
     
-    # NUEVO CAMPO
     url_destino = models.CharField(
         max_length=255, blank=True, null=True,
         help_text="Ruta interna a la que redirige la notificación"
